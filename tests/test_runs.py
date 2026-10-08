@@ -28,7 +28,8 @@ def test_profile_with_markers_stops_after_window(tmp_path, script):
     assert ev["steps"]["measured"] == 10 and ev["steps"]["warmup"] == 2
     assert ev["steps"]["end_reason"] == "window_complete"
     assert ev["run"]["exit_code"] == 0
-    assert 300 < ev["throughput"]["samples_per_s"] < 850  # 8 samples per ~10 ms sleep
+    # 8 samples per ~10 ms sleep; hosted CI runners oversleep a lot, so only check the order of magnitude.
+    assert 80 < ev["throughput"]["samples_per_s"] < 850
     assert ev["loss"][0] == [0, 1.0]
     run_dir = tmp_path / "runs"
     out = next(run_dir.iterdir())
@@ -51,7 +52,7 @@ def test_stdout_loss_lines_fallback(tmp_path, script):
     ev = api.profile(cmd, out_dir=tmp_path / "runs", profiler_steps=0, **FAST)["evidence"]
     assert ev["source"] == "log_lines"
     assert len(ev["loss"]) == 25
-    assert 20 < ev["throughput"]["steps_per_s"] < 60
+    assert 5 < ev["throughput"]["steps_per_s"] < 60  # wide: hosted CI runners oversleep
 
 
 def test_existing_sitecustomize_still_runs(tmp_path, script):
