@@ -22,14 +22,20 @@ Tools (MCP) or CLI equivalents:
 
 ## Workflow
 
-1. **Profile the unchanged command.** Use the exact command the user runs.
+1. **Profile the unchanged command.** Use the exact command the user runs,
+   with the interpreter that has their training dependencies (if `python`
+   isn't it, pass the full path, for example `.venv/bin/python`). If the
+   result has an `error`, it holds the exit code, the last stderr lines and
+   the fix; apply the fix and profile again.
    The run stops by itself after the warmup steps plus the measured window
    (default: at least 50 steps and 2 seconds), so it's safe on long jobs. Steps
    are detected from `optimizer.step()`. If the training loop has no optimizer
    step (custom loops, JAX, other frameworks), add `train_doctor.step(samples=..., loss=...)`
    at the end of each step, or make sure the script prints a line containing
    `loss` each step.
-2. **Read the findings in rank order.** Each finding gives the measured
+2. **Read the findings in rank order.** Every result also has a `next_step`
+   field that says what to do next; follow it unless you have a reason not to.
+   Each finding gives the measured
    evidence, a suggested change, an upper bound or description of the expected
    effect, and the risk to results. Read `limits` too: they say what the
    numbers can't tell you.
@@ -44,9 +50,12 @@ Tools (MCP) or CLI equivalents:
 5. **Keep only clear wins.** Keep the change only when `decision` is `keep`:
    verdict `faster` (the whole interval clears 1 + min_effect) and the loss
    trajectory `identical` or `within tolerance`. If the decision is
-   `inconclusive`, say so and either drop the change or rerun with more
-   repeats (`--repeats 9`) or a longer window (`--seconds 4`). If it is
-   `reject`, revert it. Give each run a `--label` so the run directories
+   `inconclusive`, say so and either drop the change or rerun once with more
+   repeats (`--repeats 9`) and a longer window (`--seconds 4`). Don't keep
+   rerunning the same comparison until it says `keep`: that is how noise gets
+   reported as a speedup. If the limits say the machine was busy, rerun later
+   instead. If a script stops on its own before the window closes, raise its
+   step or epoch limit in both commands. If it is `reject`, revert it. Give each run a `--label` so the run directories
    read as a history of what was tried.
 6. **Stack.** The kept candidate becomes the new baseline. Profile it again
    (the bottleneck moves) and repeat from step 2.
