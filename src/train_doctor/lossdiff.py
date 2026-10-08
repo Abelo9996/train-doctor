@@ -2,8 +2,14 @@
 
 Trajectories are aligned on cumulative samples seen when both runs report
 samples (so a batch-size change is compared at equal data), otherwise on step
-index. Both curves are smoothed with a short moving average before the
-relative difference is taken.
+index. Both curves are smoothed with a short moving average. Two numbers
+decide the check:
+
+* mean relative difference: sum of |candidate - baseline| over the common
+  range divided by the sum of |baseline| (a curve-level number, so points
+  near zero loss don't dominate)
+* final relative difference: the mean of the last 10 common points of each
+  curve, compared the same way
 """
 
 from __future__ import annotations
@@ -11,6 +17,7 @@ from __future__ import annotations
 from train_doctor.stats import mean, moving_average
 
 SMOOTH = 5
+FINAL = 10  # points averaged for the end-of-window comparison
 
 
 def trajectory(ev: dict) -> tuple[list[float], list[float], str]:
@@ -71,21 +78,24 @@ def diff(base_ev: dict, cand_ev: dict, tol: float, max_steps: int | None = None)
     pts = [(x, b) for x, b in zip(bx, bs, strict=False) if lo <= x <= hi]
     if len(pts) < 2:
         return {"status": "unavailable", "reason": "the two runs share fewer than 2 loss points", "tol": tol, "axis": axis}
-    rel = []
-    for x, b in pts:
-        c = _interp(cx, cs, x)
-        rel.append(abs(c - b) / max(abs(b), 1e-8))
-    raw_identical = len(by) == len(cy) and all(a == b for a, b in zip(by, cy, strict=False))
+    pairs = [(b, _interp(cx, cs, x)) for x, b in pts]
+    rel = [abs(c - b) / max(abs(b), 1e-8) for b, c in pairs]
+    tail = pairs[-FINAL:]
+    b_tail = mean([b for b, _ in tail])
+    c_tail = mean([c for _, c in tail])
+    n = min(len(by), len(cy))
+    raw_identical = by[:n] == cy[:n] and bx[:n] == cx[:n]
     out = {
         "axis": axis,
         "points": len(pts),
         "smoothing": SMOOTH,
         "tol": tol,
+        "mean_rel_diff": sum(abs(c - b) for b, c in pairs) / max(sum(abs(b) for b, _ in pairs), 1e-8),
+        "final_rel_diff": abs(c_tail - b_tail) / max(abs(b_tail), 1e-8),
         "max_rel_diff": max(rel),
-        "mean_rel_diff": mean(rel),
-        "final_rel_diff": rel[-1],
-        "baseline_final": pts[-1][1],
-        "candidate_final": _interp(cx, cs, pts[-1][0]),
+        "baseline_final": b_tail,
+        "candidate_final": c_tail,
+        "final_points": len(tail),
     }
     if raw_identical:
         out["status"] = "identical"

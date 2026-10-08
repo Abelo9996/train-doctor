@@ -263,10 +263,15 @@ def render_compare(r: dict) -> str:
             L.append(f"Unavailable: {lc.get('reason')}.\n")
         else:
             L.append(
-                f"Status: **{lc['status']}** (tolerance {lc['tol']:.0%} on mean and final relative difference, curves smoothed over {lc.get('smoothing')} steps, aligned on {lc.get('axis')}, {lc.get('points')} points).\n"
+                f"Status: **{lc['status']}**. Tolerance {lc['tol']:.0%} on both numbers below; curves smoothed over {lc.get('smoothing')} points "
+                f"and aligned on {lc.get('axis')} ({lc.get('points')} common points).\n"
             )
             L.append(
-                f"- Mean relative difference {_pct(lc.get('mean_rel_diff'))}, max {_pct(lc.get('max_rel_diff'))}, at the last common point {_pct(lc.get('final_rel_diff'))} (baseline {lc.get('baseline_final', 0):.4f}, candidate {lc.get('candidate_final', 0):.4f})."
+                f"- Curve-level mean relative difference: {_pct(lc.get('mean_rel_diff'))} (largest single point {_pct(lc.get('max_rel_diff'))})."
+            )
+            L.append(
+                f"- Last {lc.get('final_points', 10)} points: baseline {lc.get('baseline_final', 0):.4f}, candidate {lc.get('candidate_final', 0):.4f}, "
+                f"relative difference {_pct(lc.get('final_rel_diff'))}."
             )
             sd = lc.get("baseline_self_diff")
             if sd:

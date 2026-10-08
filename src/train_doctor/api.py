@@ -238,6 +238,8 @@ def compare(
                 "exit_code": r["evidence"]["run"].get("exit_code"),
                 "source": r["evidence"].get("source"),
                 "time_to_first_step_s": r["evidence"]["run"].get("time_to_first_step_s"),
+                "sys_cpu_pct_mean": (r["evidence"].get("resources") or {}).get("sys_cpu_pct_mean"),
+                "load_avg_1m": r["evidence"]["run"].get("load_avg_1m"),
             }
             for r in runs
         ],
