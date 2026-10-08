@@ -1,0 +1,62 @@
+[
+  {
+    "id": "checkpoint_in_hot_loop",
+    "title": "Checkpoints are written inside the step loop",
+    "score": 0.08818643687427483,
+    "score_basis": "measured torch.save share of step time",
+    "evidence": "0.01 torch.save calls per step, 9% of step time.",
+    "numbers": {
+      "save_calls_per_step": 0.00510204081632653,
+      "save_share": 0.08818643687427483
+    },
+    "suggestion": "Checkpoint every N steps or minutes instead of every step, and keep only the latest few.",
+    "expected_effect": "At most 1.10x from removing checkpoint time entirely.",
+    "risk": "none",
+    "risk_note": "Training is unchanged; you lose more progress if the run crashes between checkpoints.",
+    "tags": [
+      "io"
+    ]
+  },
+  {
+    "id": "no_mixed_precision",
+    "title": "No mixed precision on hardware that supports it",
+    "score": 0.08163019988709674,
+    "score_basis": "0.1 x compute ('other') share of step time",
+    "evidence": "Device mps, this torch build supports autocast on MPS; autocast was never entered and parameters are float32. 82% of step time is compute and Python ('other').",
+    "numbers": {
+      "device": "mps",
+      "autocast_used": false,
+      "param_dtypes": [
+        "float32"
+      ],
+      "compute_share": 0.8163019988709673
+    },
+    "suggestion": "Wrap the forward pass and loss in `with torch.autocast('mps', dtype=torch.float16):`. Gains on Apple GPUs vary by op, so measure.",
+    "expected_effect": "Largest on compute-bound models dominated by matmuls and convolutions; little or none when data loading or sync dominates.",
+    "risk": "medium",
+    "risk_note": "Lower precision changes numerics. bf16 rarely needs loss scaling; fp16 needs GradScaler. Check the loss trajectory with compare.",
+    "tags": [
+      "compute",
+      "numerics"
+    ]
+  },
+  {
+    "id": "no_torch_compile",
+    "title": "torch.compile is not used",
+    "score": 0.024489059966129018,
+    "score_basis": "prior 0.03 for mps x compute ('other') share",
+    "evidence": "torch 2.14.1 supports torch.compile and it was never called. 82% of step time is compute and Python overhead, which is what compilation reduces.",
+    "numbers": {
+      "torch": "2.14.1",
+      "device": "mps",
+      "compute_share": 0.8163019988709673
+    },
+    "suggestion": "Try `model = torch.compile(model)`. Support for MPS is newer than for CUDA and CPU; expect some models to fall back or run slower. Compare with more warmup steps (for example --warmup-steps 20): compilation happens in the first steps.",
+    "expected_effect": "Fewer kernel launches and less Python overhead per step. Compilation adds startup time, so it pays off on long runs.",
+    "risk": "low",
+    "risk_note": "Same math in principle, but fused kernels can differ in the last bits, and graph breaks or recompiles can make a run slower. Measure.",
+    "tags": [
+      "compute"
+    ]
+  }
+]

@@ -1,0 +1,915 @@
+{
+  "source": "hook",
+  "pid": 71266,
+  "steps": {
+    "total": 123,
+    "warmup": 5,
+    "measured": 113,
+    "profiled": 5,
+    "boundary": "optimizer",
+    "end_reason": "window_complete"
+  },
+  "step_time_ms": {
+    "n": 113,
+    "median": 15.37800021469593,
+    "mean": 17.648161166405256,
+    "std": 8.976407811563586,
+    "cv": 0.5086313371078527,
+    "min": 9.637542068958282,
+    "p10": 11.659358721226454,
+    "p25": 12.751000002026558,
+    "p75": 20.422708708792925,
+    "p90": 24.018441792577505,
+    "max": 88.50974962115288,
+    "iqr": 7.671708706766367
+  },
+  "window": {
+    "duration_s": 2.082463209051639,
+    "steps": 113,
+    "samples": 7232,
+    "basis": "synchronized window: device synced at window start and end",
+    "wall_start": 1791457994.449065,
+    "wall_end": 1791457996.5315368
+  },
+  "throughput": {
+    "steps_per_s": 54.26266332525538,
+    "samples_per_s": 3472.8104528163444,
+    "metric": "samples_per_s"
+  },
+  "split": {
+    "data_wait": 0.05997342961460066,
+    "host_sync": 0.3709211807920891,
+    "checkpoint_save": 0.0,
+    "log_write": 0.0008376004932738867,
+    "other": 0.5682677891000364,
+    "basis": "share of summed step time over measured steps; 'other' is forward, backward, optimizer and Python overhead"
+  },
+  "per_step": {
+    "samples": 64.0,
+    "data_wait_ms": 1.0584207515405342,
+    "sync_calls": 2.0,
+    "sync_ms": 6.546076778652131,
+    "cpu_scalar_reads": 0.0,
+    "backward_calls": 1.0,
+    "save_calls": 0.0,
+    "log_lines": 1.0,
+    "getitem_calls": 64.0
+  },
+  "data": {
+    "getitem_share_of_data_wait": 0.13492694402179653,
+    "getitem_ms_per_call": 0.002231398085853398,
+    "getitem_measured": true
+  },
+  "config": {
+    "device": "mps",
+    "torch": {
+      "version": "2.14.1",
+      "num_threads": 4,
+      "cuda_available": false,
+      "mps_available": true,
+      "compile_available": true,
+      "mps_autocast_supported": true
+    },
+    "first_step_wall": 1791457994.3241699,
+    "dataloaders": [
+      {
+        "dataset": "SyntheticImages",
+        "num_workers": 0,
+        "pin_memory": false,
+        "batch_size": 64,
+        "persistent_workers": false,
+        "prefetch_factor": null,
+        "drop_last": true,
+        "len": 20000
+      }
+    ],
+    "autocast": [
+      [
+        "mps",
+        "float16",
+        false
+      ]
+    ],
+    "grad_scaler": false,
+    "compile_calls": [],
+    "ddp": false,
+    "ddp_no_sync_calls": 0,
+    "conv_modules": 3,
+    "params": 114186,
+    "param_dtypes": [
+      "float32"
+    ],
+    "optimizer": "SGD",
+    "python": "3.12.13",
+    "executable": "~/Downloads/train-doctor/.venv/bin/python",
+    "startup_to_first_step_s": 0.3481696671806276
+  },
+  "device_memory": {
+    "allocated_max": 2196224,
+    "driver_allocated_max": 97419264,
+    "total": 12713115648,
+    "used_fraction": 0.007662894501815201
+  },
+  "loss": [
+    [
+      0,
+      2.6226868629455566
+    ],
+    [
+      1,
+      2.3052754402160645
+    ],
+    [
+      2,
+      2.424234390258789
+    ],
+    [
+      3,
+      2.6975269317626953
+    ],
+    [
+      4,
+      2.5499753952026367
+    ],
+    [
+      5,
+      2.5084195137023926
+    ],
+    [
+      6,
+      2.3767402172088623
+    ],
+    [
+      7,
+      2.4159364700317383
+    ],
+    [
+      8,
+      2.469203472137451
+    ],
+    [
+      9,
+      2.4819602966308594
+    ],
+    [
+      10,
+      2.2903199195861816
+    ],
+    [
+      11,
+      2.507427215576172
+    ],
+    [
+      12,
+      2.300448417663574
+    ],
+    [
+      13,
+      2.1779940128326416
+    ],
+    [
+      14,
+      2.3990938663482666
+    ],
+    [
+      15,
+      2.4806036949157715
+    ],
+    [
+      16,
+      2.401893138885498
+    ],
+    [
+      17,
+      2.2658281326293945
+    ],
+    [
+      18,
+      2.3642420768737793
+    ],
+    [
+      19,
+      2.1513071060180664
+    ],
+    [
+      20,
+      2.2683639526367188
+    ],
+    [
+      21,
+      2.054844617843628
+    ],
+    [
+      22,
+      1.8959499597549438
+    ],
+    [
+      23,
+      2.2126660346984863
+    ],
+    [
+      24,
+      1.8835053443908691
+    ],
+    [
+      25,
+      2.0563995838165283
+    ],
+    [
+      26,
+      2.152970790863037
+    ],
+    [
+      27,
+      2.3045763969421387
+    ],
+    [
+      28,
+      2.136806011199951
+    ],
+    [
+      29,
+      1.914222002029419
+    ],
+    [
+      30,
+      1.894597053527832
+    ],
+    [
+      31,
+      1.7753560543060303
+    ],
+    [
+      32,
+      1.968376636505127
+    ],
+    [
+      33,
+      1.9803937673568726
+    ],
+    [
+      34,
+      1.647855520248413
+    ],
+    [
+      35,
+      1.7737919092178345
+    ],
+    [
+      36,
+      1.7466908693313599
+    ],
+    [
+      37,
+      1.8391852378845215
+    ],
+    [
+      38,
+      1.937695860862732
+    ],
+    [
+      39,
+      1.5913636684417725
+    ],
+    [
+      40,
+      1.7306524515151978
+    ],
+    [
+      41,
+      1.5404832363128662
+    ],
+    [
+      42,
+      1.7640265226364136
+    ],
+    [
+      43,
+      1.777137279510498
+    ],
+    [
+      44,
+      1.6609138250350952
+    ],
+    [
+      45,
+      1.5996835231781006
+    ],
+    [
+      46,
+      1.4159259796142578
+    ],
+    [
+      47,
+      1.486513614654541
+    ],
+    [
+      48,
+      1.3602147102355957
+    ],
+    [
+      49,
+      1.9348318576812744
+    ],
+    [
+      50,
+      1.3728656768798828
+    ],
+    [
+      51,
+      1.508979082107544
+    ],
+    [
+      52,
+      1.7650684118270874
+    ],
+    [
+      53,
+      1.3360782861709595
+    ],
+    [
+      54,
+      1.3922550678253174
+    ],
+    [
+      55,
+      1.2616896629333496
+    ],
+    [
+      56,
+      1.8116402626037598
+    ],
+    [
+      57,
+      1.0821937322616577
+    ],
+    [
+      58,
+      1.4834284782409668
+    ],
+    [
+      59,
+      1.9173879623413086
+    ],
+    [
+      60,
+      1.3270597457885742
+    ],
+    [
+      61,
+      1.392992615699768
+    ],
+    [
+      62,
+      1.3003020286560059
+    ],
+    [
+      63,
+      1.325523853302002
+    ],
+    [
+      64,
+      1.1469405889511108
+    ],
+    [
+      65,
+      1.2124505043029785
+    ],
+    [
+      66,
+      1.8237091302871704
+    ],
+    [
+      67,
+      1.4027286767959595
+    ],
+    [
+      68,
+      0.949140727519989
+    ],
+    [
+      69,
+      1.0976873636245728
+    ],
+    [
+      70,
+      1.202151894569397
+    ],
+    [
+      71,
+      1.688661813735962
+    ],
+    [
+      72,
+      1.2754802703857422
+    ],
+    [
+      73,
+      1.0746437311172485
+    ],
+    [
+      74,
+      1.3461041450500488
+    ],
+    [
+      75,
+      1.3766940832138062
+    ],
+    [
+      76,
+      1.1313817501068115
+    ],
+    [
+      77,
+      1.4309961795806885
+    ],
+    [
+      78,
+      1.811905860900879
+    ],
+    [
+      79,
+      1.0920785665512085
+    ],
+    [
+      80,
+      1.2767014503479004
+    ],
+    [
+      81,
+      1.218196988105774
+    ],
+    [
+      82,
+      1.1825494766235352
+    ],
+    [
+      83,
+      1.1104867458343506
+    ],
+    [
+      84,
+      1.3757134675979614
+    ],
+    [
+      85,
+      0.9439209699630737
+    ],
+    [
+      86,
+      1.165794849395752
+    ],
+    [
+      87,
+      1.3759130239486694
+    ],
+    [
+      88,
+      1.3227615356445312
+    ],
+    [
+      89,
+      1.1844537258148193
+    ],
+    [
+      90,
+      1.036404013633728
+    ],
+    [
+      91,
+      1.3592679500579834
+    ],
+    [
+      92,
+      0.9632420539855957
+    ],
+    [
+      93,
+      1.0884578227996826
+    ],
+    [
+      94,
+      1.3206558227539062
+    ],
+    [
+      95,
+      0.9839794635772705
+    ],
+    [
+      96,
+      1.2265204191207886
+    ],
+    [
+      97,
+      1.3679113388061523
+    ],
+    [
+      98,
+      0.9619002342224121
+    ],
+    [
+      99,
+      0.811191201210022
+    ],
+    [
+      100,
+      1.284684419631958
+    ],
+    [
+      101,
+      1.2949390411376953
+    ],
+    [
+      102,
+      1.184282660484314
+    ],
+    [
+      103,
+      0.9976323843002319
+    ],
+    [
+      104,
+      1.0468854904174805
+    ],
+    [
+      105,
+      1.2237558364868164
+    ],
+    [
+      106,
+      1.6668241024017334
+    ],
+    [
+      107,
+      0.861018717288971
+    ],
+    [
+      108,
+      1.191313624382019
+    ],
+    [
+      109,
+      1.0371980667114258
+    ],
+    [
+      110,
+      1.269953727722168
+    ],
+    [
+      111,
+      1.2381629943847656
+    ],
+    [
+      112,
+      1.2403398752212524
+    ],
+    [
+      113,
+      0.9948000907897949
+    ],
+    [
+      114,
+      1.165654182434082
+    ],
+    [
+      115,
+      1.012096881866455
+    ],
+    [
+      116,
+      1.2944352626800537
+    ],
+    [
+      117,
+      1.4821220636367798
+    ],
+    [
+      118,
+      1.525625467300415
+    ],
+    [
+      119,
+      1.3809523582458496
+    ],
+    [
+      120,
+      1.4951202869415283
+    ],
+    [
+      121,
+      0.8034977912902832
+    ],
+    [
+      122,
+      0.8361225128173828
+    ]
+  ],
+  "samples_by_step": [
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64
+  ],
+  "profiler_errors": [],
+  "resources": {
+    "scope": "measured window",
+    "n_samples": 8,
+    "proc_cpu_pct_mean": 57.5625,
+    "proc_cpu_pct_p90": 67.53,
+    "cores_logical": 10,
+    "sys_cpu_pct_mean": 44.4125,
+    "processes_max": 1,
+    "tree_rss_peak": 440434688,
+    "max_proc_rss_peak": 440434688,
+    "gpu": {
+      "backend": "apple",
+      "name": "Apple M4",
+      "n_samples": 2,
+      "util_pct_mean": 84.5,
+      "util_pct_max": 87.0,
+      "mem_used_mib_max": null,
+      "mem_total_mib": null,
+      "util_scope": "system-wide (ioreg Device Utilization %)"
+    }
+  },
+  "profiler": {
+    "profiled_steps": 5,
+    "sync_ops": {
+      "aten::_local_scalar_dense": {
+        "label": "scalar read (.item(), float(), bool())",
+        "per_step": 2.0,
+        "cpu_total_ms_per_step": 67.24233460000004
+      },
+      "aten::item": {
+        "label": "scalar read (.item())",
+        "per_step": 2.0,
+        "cpu_total_ms_per_step": 67.25892759999999
+      }
+    },
+    "top_ops": [
+      {
+        "name": "aten::_local_scalar_dense",
+        "count_per_step": 2.0,
+        "self_cpu_ms_per_step": 67.23006920000002,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::copy_",
+        "count_per_step": 21.0,
+        "self_cpu_ms_per_step": 19.38252000000008,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::native_batch_norm",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 1.40572720000002,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::native_batch_norm_backward",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 0.6815041999999942,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::_mps_convolution",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 0.5995222000000154,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::cat",
+        "count_per_step": 2.0,
+        "self_cpu_ms_per_step": 0.5124805999999855,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "enumerate(DataLoader)#_SingleProcessDataLoaderIter.__next__",
+        "count_per_step": 1.0,
+        "self_cpu_ms_per_step": 0.4733118000000504,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::mps_convolution_backward",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 0.4538057999999612,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "Optimizer.step#SGD.step",
+        "count_per_step": 1.0,
+        "self_cpu_ms_per_step": 0.32431819999995937,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::max_pool2d_backward",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 0.30178419999998585,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::reflection_pad2d",
+        "count_per_step": 1.0,
+        "self_cpu_ms_per_step": 0.2785284000000036,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::nll_loss_forward",
+        "count_per_step": 1.0,
+        "self_cpu_ms_per_step": 0.2750514000000054,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::flip",
+        "count_per_step": 1.0,
+        "self_cpu_ms_per_step": 0.24907019999998156,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::add_",
+        "count_per_step": 33.0,
+        "self_cpu_ms_per_step": 0.23098880000002298,
+        "self_device_ms_per_step": 0.0
+      },
+      {
+        "name": "aten::threshold_backward",
+        "count_per_step": 3.0,
+        "self_cpu_ms_per_step": 0.22674599999997153,
+        "self_device_ms_per_step": 0.0
+      }
+    ],
+    "trace": "torch_trace.json.gz"
+  },
+  "py_spy": null,
+  "run": {
+    "cmd": [
+      "python",
+      "examples/cnn_images/train.py",
+      "--batch-augment"
+    ],
+    "cwd": "~/Downloads/train-doctor",
+    "started_at": "2026-10-08T11:13:10+00:00",
+    "wall_s": 7.783,
+    "exit_code": 0,
+    "timed_out": false,
+    "env_set": {
+      "TRAIN_DOCTOR_RUN_DIR": "examples/cnn_images/runs/20261008-071310-profile-batch-augment",
+      "TRAIN_DOCTOR_WARMUP": "5",
+      "TRAIN_DOCTOR_STEPS": "50",
+      "TRAIN_DOCTOR_SECONDS": "2.0",
+      "TRAIN_DOCTOR_PROFILER_STEPS": "5",
+      "TRAIN_DOCTOR_STOP": "1"
+    },
+    "provenance": {
+      "cwd": ".",
+      "file_sha256": {
+        "examples/cnn_images/train.py": "8fe198f974a847b1bf9538c7c49b802c0b5b3206ae3b828a2af097ebb8cc3fe5"
+      },
+      "git_commit": "a650152029b4ff82bc1d1970a60c20f1ea8e2258",
+      "git_dirty": true
+    },
+    "label": "batch-augment",
+    "load_avg_1m": 7.4,
+    "time_to_first_step_s": 3.332382917404175
+  },
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.0",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "limits": [
+    "Apple GPU utilization comes from ioreg and is system-wide: other apps using the GPU are included.",
+    "Time inside sync calls includes waiting for queued device work, so it is not all wasted time; removing a sync helps by letting the host queue the next step earlier."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "cmd": [
+    "python",
+    "examples/tabular_mlp/train.py"
+  ],
+  "cwd": "~/Downloads/train-doctor",
+  "started_at": "2026-10-08T11:24:34+00:00",
+  "start_wall": 1791458674.114146,
+  "load_avg_1m": 5.65,
+  "wall_s": 8.517,
+  "exit_code": 0,
+  "timed_out": false,
+  "config": {
+    "cwd": ".",
+    "warmup_steps": 5,
+    "steps": 50,
+    "seconds": 4.0,
+    "timeout": 600.0,
+    "profiler_steps": 0,
+    "seed": 0,
+    "hook": true,
+    "stop_at_end": true,
+    "py_spy": false,
+    "sample_interval": 0.25,
+    "gpu_interval": 1.0,
+    "echo": false
+  },
+  "env_set": {
+    "TRAIN_DOCTOR_RUN_DIR": "examples/tabular_mlp/runs/20261008-072206-compare-ckpt-every-200-9-repeats/baseline/rep-7",
+    "TRAIN_DOCTOR_WARMUP": "5",
+    "TRAIN_DOCTOR_STEPS": "50",
+    "TRAIN_DOCTOR_SECONDS": "4.0",
+    "TRAIN_DOCTOR_PROFILER_STEPS": "0",
+    "TRAIN_DOCTOR_STOP": "1",
+    "TRAIN_DOCTOR_SEED": "0"
+  },
+  "hook_dir": "~/Downloads/train-doctor/src/train_doctor/_hook",
+  "py_spy": null,
+  "kind": "compare-run",
+  "label": null,
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.0",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "provenance": {
+    "cwd": ".",
+    "file_sha256": {
+      "examples/tabular_mlp/train.py": "596ad49ebb0770a135d8d7af003360e68167424e550b602e1464dc4d66bc6435"
+    },
+    "git_commit": "ae3c031e0b9becea2451c683f8b04d0dd84c5bcf",
+    "git_dirty": true
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "train_doctor": "0.1.0",
+  "kind": "compare",
+  "label": "log-every-50",
+  "root": "examples/cnn_images/runs/20261008-071322-compare-log-every-50",
+  "commands": {
+    "baseline": [
+      "python",
+      "examples/cnn_images/train.py",
+      "--batch-augment"
+    ],
+    "candidate": [
+      "python",
+      "examples/cnn_images/train.py",
+      "--batch-augment",
+      "--log-every",
+      "50"
+    ]
+  },
+  "settings": {
+    "repeats": 5,
+    "warmup_runs": 1,
+    "warmup_steps": 5,
+    "steps": 50,
+    "seconds": 4.0,
+    "seed": 0,
+    "loss_tol": 0.05,
+    "min_effect": 0.02,
+    "order_seed": 0,
+    "interval": "95% percentile bootstrap of the ratio of medians, 10000 resamples, seed 0"
+  },
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.0",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "metric": "samples_per_s",
+  "runs": [
+    {
+      "order": 0,
+      "phase": "warmup",
+      "arm": "baseline",
+      "index": 0,
+      "dir": "warmup/baseline-0",
+      "value": 2663.528245610207,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 4.309737205505371,
+      "sys_cpu_pct_mean": 54.45333333333333,
+      "load_avg_1m": 7.18
+    },
+    {
+      "order": 1,
+      "phase": "warmup",
+      "arm": "candidate",
+      "index": 0,
+      "dir": "warmup/candidate-0",
+      "value": 2672.0330794686015,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.081223964691162,
+      "sys_cpu_pct_mean": 48.54,
+      "load_avg_1m": 9.3
+    },
+    {
+      "order": 2,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 0,
+      "dir": "baseline/rep-0",
+      "value": 2245.255361855938,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.2533321380615234,
+      "sys_cpu_pct_mean": 52.28,
+      "load_avg_1m": 9.11
+    },
+    {
+      "order": 3,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 0,
+      "dir": "candidate/rep-0",
+      "value": 3072.6417838789384,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 2.834118127822876,
+      "sys_cpu_pct_mean": 47.12,
+      "load_avg_1m": 9.18
+    },
+    {
+      "order": 4,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 1,
+      "dir": "baseline/rep-1",
+      "value": 2286.1658942791464,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.1102418899536133,
+      "sys_cpu_pct_mean": 43.10666666666667,
+      "load_avg_1m": 8.94
+    },
+    {
+      "order": 5,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 1,
+      "dir": "candidate/rep-1",
+      "value": 3024.802546862812,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 2.6888411045074463,
+      "sys_cpu_pct_mean": 45.34666666666667,
+      "load_avg_1m": 8.34
+    },
+    {
+      "order": 6,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 2,
+      "dir": "candidate/rep-2",
+      "value": 3087.387475703871,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.4801249504089355,
+      "sys_cpu_pct_mean": 48.92666666666666,
+      "load_avg_1m": 8.23
+    },
+    {
+      "order": 7,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 2,
+      "dir": "baseline/rep-2",
+      "value": 2736.6223207096677,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.414705991744995,
+      "sys_cpu_pct_mean": 52.72,
+      "load_avg_1m": 7.43
+    },
+    {
+      "order": 8,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 3,
+      "dir": "candidate/rep-3",
+      "value": 3028.53038754213,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.0041351318359375,
+      "sys_cpu_pct_mean": 36.92142857142857,
+      "load_avg_1m": 8.08
+    },
+    {
+      "order": 9,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 3,
+      "dir": "baseline/rep-3",
+      "value": 2419.927059591168,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 2.9812920093536377,
+      "sys_cpu_pct_mean": 45.971428571428575,
+      "load_avg_1m": 7.84
+    },
+    {
+      "order": 10,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 4,
+      "dir": "baseline/rep-4",
+      "value": 2662.9794619474956,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.259765148162842,
+      "sys_cpu_pct_mean": 42.457142857142856,
+      "load_avg_1m": 7.4
+    },
+    {
+      "order": 11,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 4,
+      "dir": "candidate/rep-4",
+      "value": 2675.6860464454944,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 2.920727014541626,
+      "sys_cpu_pct_mean": 39.34285714285714,
+      "load_avg_1m": 7.21
+    }
+  ],
+  "errors": [],
+  "limits": [
+    "Apple laptops change clock speeds with temperature and power state; interleaving reduces but doesn't remove that drift."
+  ],
+  "throughput": {
+    "baseline": {
+      "n": 5,
+      "median": 2419.927059591168,
+      "mean": 2470.190019676683,
+      "std": 220.8737106689272,
+      "cv": 0.08941567608545226,
+      "min": 2245.255361855938,
+      "p10": 2261.6195748252217,
+      "p25": 2286.1658942791464,
+      "p75": 2662.9794619474956,
+      "p90": 2707.165177204799,
+      "max": 2736.6223207096677,
+      "iqr": 376.81356766834915
+    },
+    "candidate": {
+      "n": 5,
+      "median": 3028.53038754213,
+      "mean": 2977.8096480866493,
+      "std": 171.07018362294863,
+      "cv": 0.05744832740832424,
+      "min": 2675.6860464454944,
+      "p10": 2815.3326466124213,
+      "p25": 3024.802546862812,
+      "p75": 3072.6417838789384,
+      "p90": 3081.489198973898,
+      "max": 3087.387475703871,
+      "iqr": 47.83923701612639
+    }
+  },
+  "ratio": {
+    "point": 1.2514965587656108,
+    "low": 1.1053050777128839,
+    "high": 1.3504651973987036
+  },
+  "mann_whitney": {
+    "u": 24.0,
+    "p_two_sided": 0.015873015873015872,
+    "n_baseline": 5,
+    "n_candidate": 5
+  },
+  "verdict": "faster",
+  "loss_check": {
+    "axis": "samples",
+    "points": 151,
+    "smoothing": 5,
+    "tol": 0.05,
+    "mean_rel_diff": 0.0,
+    "final_rel_diff": 0.0,
+    "max_rel_diff": 0.0,
+    "baseline_final": 1.0471897900104523,
+    "candidate_final": 1.0471897900104523,
+    "final_points": 10,
+    "status": "identical",
+    "baseline_self_diff": {
+      "status": "identical",
+      "max_rel_diff": 0.0,
+      "mean_rel_diff": 0.0,
+      "final_rel_diff": 0.0
+    }
+  },
+  "decision": "keep",
+  "reason": "candidate is faster (1.25x, 95% interval 1.11 to 1.35) and the loss trajectory is identical",
+  "time_to_first_step_s": {
+    "baseline": 3.2533321380615234,
+    "candidate": 2.920727014541626
+  }
+}

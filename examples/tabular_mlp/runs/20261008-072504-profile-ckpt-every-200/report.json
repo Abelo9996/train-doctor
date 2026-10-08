@@ -1,0 +1,703 @@
+{
+  "train_doctor": "0.1.0",
+  "kind": "profile",
+  "run_dir": "examples/tabular_mlp/runs/20261008-072504-profile-ckpt-every-200",
+  "findings": [
+    {
+      "id": "dataloader_bound",
+      "title": "Training waits on the DataLoader (num_workers=0)",
+      "score": 0.3430477992612761,
+      "score_basis": "measured data-wait share of step time",
+      "evidence": "34% of step time is spent waiting for the next batch (13.7 ms per step) and the DataLoader runs with num_workers=0, so loading and the training step take turns on one core.",
+      "numbers": {
+        "data_wait_share": 0.3430477992612761,
+        "data_wait_ms_per_step": 13.704802449792624,
+        "num_workers": 0,
+        "pin_memory": false,
+        "suggested_workers": 5
+      },
+      "suggestion": "Set num_workers=5 and persistent_workers=True on the DataLoader. On macOS and Windows workers start with spawn: keep the training code under `if __name__ == \"__main__\":` and make sure the dataset pickles.",
+      "expected_effect": "At most 1.52x (the step time without any data wait), reached only if loading fully overlaps compute.",
+      "risk": "low",
+      "risk_note": "Deterministic datasets give identical batches. Random augmentation in workers draws from per-worker RNG streams, so exact samples differ (same distribution). Each worker holds a copy of the dataset in memory.",
+      "tags": [
+        "data"
+      ]
+    },
+    {
+      "id": "cpu_bound_preprocessing",
+      "title": "Per-sample preprocessing in RawRows is expensive",
+      "score": 0.2118248005276179,
+      "score_basis": "data-wait share times the __getitem__ share of it, times 0.9 so the one-line worker fix ranks first when both apply",
+      "evidence": "34% of step time is data wait and 69% of that is inside RawRows.__getitem__ (0.04 ms per sample).",
+      "numbers": {
+        "data_wait_share": 0.3430477992612761,
+        "getitem_share_of_data_wait": 0.6860877404896939,
+        "getitem_ms_per_sample": 0.03672928494779626,
+        "num_workers": 0,
+        "proc_cpu_pct_mean": 45.1875
+      },
+      "suggestion": "Make preprocessing cheaper instead of (or as well as) parallelizing it: precompute or cache deterministic transforms once, move per-element Python loops to vectorized tensor ops on the whole batch (or on the device), and keep only cheap random augmentation per sample.",
+      "expected_effect": "At most 1.52x if data wait disappears entirely.",
+      "risk": "low",
+      "risk_note": "Only safe if the cached or vectorized path produces the same tensors. compare's loss check catches a transform that changed.",
+      "tags": [
+        "data"
+      ]
+    },
+    {
+      "id": "no_mixed_precision",
+      "title": "No mixed precision on hardware that supports it",
+      "score": 0.06258214474574607,
+      "score_basis": "0.1 x compute ('other') share of step time",
+      "evidence": "Device mps, this torch build supports autocast on MPS; autocast was never entered and parameters are float32. 63% of step time is compute and Python ('other').",
+      "numbers": {
+        "device": "mps",
+        "autocast_used": false,
+        "param_dtypes": [
+          "float32"
+        ],
+        "compute_share": 0.6258214474574607
+      },
+      "suggestion": "Wrap the forward pass and loss in `with torch.autocast('mps', dtype=torch.float16):`. Gains on Apple GPUs vary by op, so measure.",
+      "expected_effect": "Largest on compute-bound models dominated by matmuls and convolutions; little or none when data loading or sync dominates.",
+      "risk": "medium",
+      "risk_note": "Lower precision changes numerics. bf16 rarely needs loss scaling; fp16 needs GradScaler. Check the loss trajectory with compare.",
+      "tags": [
+        "compute",
+        "numerics"
+      ]
+    },
+    {
+      "id": "no_torch_compile",
+      "title": "torch.compile is not used",
+      "score": 0.01877464342372382,
+      "score_basis": "prior 0.03 for mps x compute ('other') share",
+      "evidence": "torch 2.14.1 supports torch.compile and it was never called. 63% of step time is compute and Python overhead, which is what compilation reduces.",
+      "numbers": {
+        "torch": "2.14.1",
+        "device": "mps",
+        "compute_share": 0.6258214474574607
+      },
+      "suggestion": "Try `model = torch.compile(model)`. Support for MPS is newer than for CUDA and CPU; expect some models to fall back or run slower. Compare with more warmup steps (for example --warmup-steps 20): compilation happens in the first steps.",
+      "expected_effect": "Fewer kernel launches and less Python overhead per step. Compilation adds startup time, so it pays off on long runs.",
+      "risk": "low",
+      "risk_note": "Same math in principle, but fused kernels can differ in the last bits, and graph breaks or recompiles can make a run slower. Measure.",
+      "tags": [
+        "compute"
+      ]
+    }
+  ],
+  "evidence": {
+    "source": "hook",
+    "pid": 86802,
+    "steps": {
+      "total": 60,
+      "warmup": 5,
+      "measured": 50,
+      "profiled": 5,
+      "boundary": "optimizer",
+      "end_reason": "window_complete"
+    },
+    "step_time_ms": {
+      "n": 50,
+      "median": 28.56999938376248,
+      "mean": 39.95012496598065,
+      "std": 31.20072358088355,
+      "cv": 0.7809918894484659,
+      "min": 11.006792075932026,
+      "p10": 15.00974204391241,
+      "p25": 17.59381266310811,
+      "p75": 61.002406175248325,
+      "p90": 75.07680817507207,
+      "max": 188.5252078063786,
+      "iqr": 43.408593512140214
+    },
+    "window": {
+      "duration_s": 2.0080691250041127,
+      "steps": 50,
+      "samples": 12800,
+      "basis": "synchronized window: device synced at window start and end",
+      "wall_start": 1791458707.486845,
+      "wall_end": 1791458709.494924
+    },
+    "throughput": {
+      "steps_per_s": 24.899541244576227,
+      "samples_per_s": 6374.282558611514,
+      "metric": "samples_per_s"
+    },
+    "split": {
+      "data_wait": 0.3430477992612761,
+      "host_sync": 0.031092184291851822,
+      "checkpoint_save": 0.0,
+      "log_write": 3.8568989411432796e-05,
+      "other": 0.6258214474574607,
+      "basis": "share of summed step time over measured steps; 'other' is forward, backward, optimizer and Python overhead"
+    },
+    "per_step": {
+      "samples": 256.0,
+      "data_wait_ms": 13.704802449792624,
+      "sync_calls": 0.04,
+      "sync_ms": 1.2421366479247808,
+      "cpu_scalar_reads": 8.0,
+      "backward_calls": 1.0,
+      "save_calls": 0.0,
+      "log_lines": 0.04,
+      "getitem_calls": 256.0
+    },
+    "data": {
+      "getitem_share_of_data_wait": 0.6860877404896939,
+      "getitem_ms_per_call": 0.03672928494779626,
+      "getitem_measured": true
+    },
+    "config": {
+      "device": "mps",
+      "torch": {
+        "version": "2.14.1",
+        "num_threads": 4,
+        "cuda_available": false,
+        "mps_available": true,
+        "compile_available": true,
+        "mps_autocast_supported": true
+      },
+      "first_step_wall": 1791458707.258498,
+      "dataloaders": [
+        {
+          "dataset": "RawRows",
+          "num_workers": 0,
+          "pin_memory": false,
+          "batch_size": 256,
+          "persistent_workers": false,
+          "prefetch_factor": null,
+          "drop_last": true,
+          "len": 60000
+        }
+      ],
+      "autocast": [
+        [
+          "mps",
+          "float16",
+          false
+        ]
+      ],
+      "grad_scaler": false,
+      "compile_calls": [],
+      "ddp": false,
+      "ddp_no_sync_calls": 0,
+      "conv_modules": 0,
+      "params": 2311170,
+      "param_dtypes": [
+        "float32"
+      ],
+      "optimizer": "AdamW",
+      "python": "3.12.13",
+      "executable": "~/Downloads/train-doctor/.venv/bin/python",
+      "startup_to_first_step_s": 0.28845470771193504
+    },
+    "device_memory": {
+      "allocated_max": 37207040,
+      "driver_allocated_max": 95125504,
+      "total": 12713115648,
+      "used_fraction": 0.007482469807860589
+    },
+    "loss": [
+      [
+        0,
+        0.7009804844856262
+      ],
+      [
+        1,
+        0.6163040399551392
+      ],
+      [
+        2,
+        0.6046960949897766
+      ],
+      [
+        3,
+        0.5943437814712524
+      ],
+      [
+        4,
+        0.596013069152832
+      ],
+      [
+        5,
+        0.5624250769615173
+      ],
+      [
+        6,
+        0.5501405000686646
+      ],
+      [
+        7,
+        0.4962584376335144
+      ],
+      [
+        8,
+        0.43641412258148193
+      ],
+      [
+        9,
+        0.49352115392684937
+      ],
+      [
+        10,
+        0.48567190766334534
+      ],
+      [
+        11,
+        0.5010986328125
+      ],
+      [
+        12,
+        0.4631516933441162
+      ],
+      [
+        13,
+        0.4396868348121643
+      ],
+      [
+        14,
+        0.4192535877227783
+      ],
+      [
+        15,
+        0.5083334445953369
+      ],
+      [
+        16,
+        0.43261757493019104
+      ],
+      [
+        17,
+        0.462441086769104
+      ],
+      [
+        18,
+        0.4892909824848175
+      ],
+      [
+        19,
+        0.3869628310203552
+      ],
+      [
+        20,
+        0.3921507000923157
+      ],
+      [
+        21,
+        0.5055049657821655
+      ],
+      [
+        22,
+        0.4234636127948761
+      ],
+      [
+        23,
+        0.4055936932563782
+      ],
+      [
+        24,
+        0.4272575378417969
+      ],
+      [
+        25,
+        0.4023364186286926
+      ],
+      [
+        26,
+        0.4058679938316345
+      ],
+      [
+        27,
+        0.43735265731811523
+      ],
+      [
+        28,
+        0.4030553698539734
+      ],
+      [
+        29,
+        0.47592562437057495
+      ],
+      [
+        30,
+        0.39882373809814453
+      ],
+      [
+        31,
+        0.39850765466690063
+      ],
+      [
+        32,
+        0.4434763193130493
+      ],
+      [
+        33,
+        0.38879746198654175
+      ],
+      [
+        34,
+        0.3782796859741211
+      ],
+      [
+        35,
+        0.46174368262290955
+      ],
+      [
+        36,
+        0.3585076332092285
+      ],
+      [
+        37,
+        0.37885159254074097
+      ],
+      [
+        38,
+        0.3853949010372162
+      ],
+      [
+        39,
+        0.33693456649780273
+      ],
+      [
+        40,
+        0.3755730390548706
+      ],
+      [
+        41,
+        0.3673778176307678
+      ],
+      [
+        42,
+        0.33372318744659424
+      ],
+      [
+        43,
+        0.41680946946144104
+      ],
+      [
+        44,
+        0.37760210037231445
+      ],
+      [
+        45,
+        0.3968654274940491
+      ],
+      [
+        46,
+        0.3831353783607483
+      ],
+      [
+        47,
+        0.3262847661972046
+      ],
+      [
+        48,
+        0.3510197401046753
+      ],
+      [
+        49,
+        0.3595074415206909
+      ],
+      [
+        50,
+        0.3929344117641449
+      ],
+      [
+        51,
+        0.3285554051399231
+      ],
+      [
+        52,
+        0.34710490703582764
+      ],
+      [
+        53,
+        0.3144761323928833
+      ],
+      [
+        54,
+        0.35408109426498413
+      ],
+      [
+        55,
+        0.36779314279556274
+      ],
+      [
+        56,
+        0.3673567771911621
+      ],
+      [
+        57,
+        0.3500877022743225
+      ],
+      [
+        58,
+        0.3457307815551758
+      ],
+      [
+        59,
+        0.29648661613464355
+      ]
+    ],
+    "samples_by_step": [
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256,
+      256
+    ],
+    "profiler_errors": [],
+    "resources": {
+      "scope": "measured window",
+      "n_samples": 8,
+      "proc_cpu_pct_mean": 45.1875,
+      "proc_cpu_pct_p90": 87.07,
+      "cores_logical": 10,
+      "sys_cpu_pct_mean": 42.612500000000004,
+      "processes_max": 1,
+      "tree_rss_peak": 453427200,
+      "max_proc_rss_peak": 453427200,
+      "gpu": {
+        "backend": "apple",
+        "name": "Apple M4",
+        "n_samples": 2,
+        "util_pct_mean": 99.5,
+        "util_pct_max": 100.0,
+        "mem_used_mib_max": null,
+        "mem_total_mib": null,
+        "util_scope": "system-wide (ioreg Device Utilization %)"
+      }
+    },
+    "profiler": {
+      "profiled_steps": 5,
+      "sync_ops": {
+        "aten::item": {
+          "label": "scalar read (.item())",
+          "per_step": 8.0,
+          "cpu_total_ms_per_step": 0.005314999999999782
+        },
+        "aten::_local_scalar_dense": {
+          "label": "scalar read (.item(), float(), bool())",
+          "per_step": 8.0,
+          "cpu_total_ms_per_step": 0.001933999999999287
+        }
+      },
+      "top_ops": [
+        {
+          "name": "enumerate(DataLoader)#_SingleProcessDataLoaderIter.__next__",
+          "count_per_step": 1.0,
+          "self_cpu_ms_per_step": 6.562305600000013,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::copy_",
+          "count_per_step": 42.0,
+          "self_cpu_ms_per_step": 3.3140489999999905,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::addcmul_",
+          "count_per_step": 8.0,
+          "self_cpu_ms_per_step": 0.3099136000000032,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::linear",
+          "count_per_step": 4.0,
+          "self_cpu_ms_per_step": 0.3007460000000003,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::addcdiv_",
+          "count_per_step": 8.0,
+          "self_cpu_ms_per_step": 0.2903893999999982,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::mm",
+          "count_per_step": 7.0,
+          "self_cpu_ms_per_step": 0.25901939999999957,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "Optimizer.step#AdamW.step",
+          "count_per_step": 1.0,
+          "self_cpu_ms_per_step": 0.2297194000000032,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::_log_softmax",
+          "count_per_step": 1.0,
+          "self_cpu_ms_per_step": 0.1402405999999999,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::empty",
+          "count_per_step": 516.0,
+          "self_cpu_ms_per_step": 0.14021679999996908,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::nll_loss_forward",
+          "count_per_step": 1.0,
+          "self_cpu_ms_per_step": 0.13099639999999563,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::cat",
+          "count_per_step": 2.0,
+          "self_cpu_ms_per_step": 0.12727899999999645,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::detach_",
+          "count_per_step": 512.0,
+          "self_cpu_ms_per_step": 0.11883460000000529,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::nll_loss_backward",
+          "count_per_step": 1.0,
+          "self_cpu_ms_per_step": 0.11432559999999867,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::stack",
+          "count_per_step": 2.0,
+          "self_cpu_ms_per_step": 0.10369060000001044,
+          "self_device_ms_per_step": 0.0
+        },
+        {
+          "name": "aten::threshold_backward",
+          "count_per_step": 3.0,
+          "self_cpu_ms_per_step": 0.08867919999999867,
+          "self_device_ms_per_step": 0.0
+        }
+      ],
+      "trace": "torch_trace.json.gz"
+    },
+    "py_spy": null,
+    "run": {
+      "cmd": [
+        "python",
+        "examples/tabular_mlp/train.py",
+        "--ckpt-every",
+        "200"
+      ],
+      "cwd": "~/Downloads/train-doctor",
+      "started_at": "2026-10-08T11:25:04+00:00",
+      "wall_s": 6.824,
+      "exit_code": 0,
+      "timed_out": false,
+      "env_set": {
+        "TRAIN_DOCTOR_RUN_DIR": "examples/tabular_mlp/runs/20261008-072504-profile-ckpt-every-200",
+        "TRAIN_DOCTOR_WARMUP": "5",
+        "TRAIN_DOCTOR_STEPS": "50",
+        "TRAIN_DOCTOR_SECONDS": "2.0",
+        "TRAIN_DOCTOR_PROFILER_STEPS": "5",
+        "TRAIN_DOCTOR_STOP": "1"
+      },
+      "provenance": {
+        "cwd": ".",
+        "file_sha256": {
+          "examples/tabular_mlp/train.py": "596ad49ebb0770a135d8d7af003360e68167424e550b602e1464dc4d66bc6435"
+        },
+        "git_commit": "ae3c031e0b9becea2451c683f8b04d0dd84c5bcf",
+        "git_dirty": true
+      },
+      "label": "ckpt-every-200",
+      "load_avg_1m": 5.33,
+      "time_to_first_step_s": 3.011197805404663
+    },
+    "machine": {
+      "os": "Darwin 25.2.0",
+      "platform": "macOS-26.2-arm64-arm-64bit",
+      "arch": "arm64",
+      "cpu": "Apple M4",
+      "cores_physical": 10,
+      "cores_logical": 10,
+      "ram_bytes": 17179869184,
+      "tool_python": "3.12.13",
+      "train_doctor": "0.1.0",
+      "gpu_backend": "apple",
+      "gpus": [
+        {
+          "name": "Apple M4"
+        }
+      ]
+    },
+    "limits": [
+      "Apple GPU utilization comes from ioreg and is system-wide: other apps using the GPU are included."
+    ]
+  },
+  "files": [
+    "events.86802.jsonl",
+    "evidence.json",
+    "findings.json",
+    "log_losses.jsonl",
+    "run.json",
+    "samples.jsonl",
+    "stderr.log",
+    "stdout.log",
+    "torch_ops.json",
+    "torch_trace.json.gz"
+  ]
+}

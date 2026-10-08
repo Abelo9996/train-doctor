@@ -1,0 +1,85 @@
+[
+  {
+    "id": "checkpoint_in_hot_loop",
+    "title": "Checkpoints are written inside the step loop",
+    "score": 0.5277571101616733,
+    "score_basis": "measured torch.save share of step time",
+    "evidence": "0.20 torch.save calls per step, 53% of step time.",
+    "numbers": {
+      "save_calls_per_step": 0.2,
+      "save_share": 0.5277571101616733
+    },
+    "suggestion": "Checkpoint every N steps or minutes instead of every step, and keep only the latest few.",
+    "expected_effect": "At most 2.12x from removing checkpoint time entirely.",
+    "risk": "none",
+    "risk_note": "Training is unchanged; you lose more progress if the run crashes between checkpoints.",
+    "tags": [
+      "io"
+    ]
+  },
+  {
+    "id": "dataloader_bound",
+    "title": "Training waits on the DataLoader (num_workers=0)",
+    "score": 0.2823676696992295,
+    "score_basis": "measured data-wait share of step time",
+    "evidence": "28% of step time is spent waiting for the next batch (14.0 ms per step) and the DataLoader runs with num_workers=0, so loading and the training step take turns on one core.",
+    "numbers": {
+      "data_wait_share": 0.2823676696992295,
+      "data_wait_ms_per_step": 13.974424907937646,
+      "num_workers": 0,
+      "pin_memory": false,
+      "suggested_workers": 5
+    },
+    "suggestion": "Set num_workers=5 and persistent_workers=True on the DataLoader. On macOS and Windows workers start with spawn: keep the training code under `if __name__ == \"__main__\":` and make sure the dataset pickles.",
+    "expected_effect": "At most 1.39x (the step time without any data wait), reached only if loading fully overlaps compute.",
+    "risk": "low",
+    "risk_note": "Deterministic datasets give identical batches. Random augmentation in workers draws from per-worker RNG streams, so exact samples differ (same distribution). Each worker holds a copy of the dataset in memory.",
+    "tags": [
+      "data"
+    ]
+  },
+  {
+    "id": "cpu_bound_preprocessing",
+    "title": "Per-sample preprocessing in RawRows is expensive",
+    "score": 0.18099503309005843,
+    "score_basis": "data-wait share times the __getitem__ share of it, times 0.9 so the one-line worker fix ranks first when both apply",
+    "evidence": "28% of step time is data wait and 71% of that is inside RawRows.__getitem__ (0.04 ms per sample).",
+    "numbers": {
+      "data_wait_share": 0.2823676696992295,
+      "getitem_share_of_data_wait": 0.712211821333864,
+      "getitem_ms_per_sample": 0.03887793209287338,
+      "num_workers": 0,
+      "proc_cpu_pct_mean": 62.111111111111114
+    },
+    "suggestion": "Make preprocessing cheaper instead of (or as well as) parallelizing it: precompute or cache deterministic transforms once, move per-element Python loops to vectorized tensor ops on the whole batch (or on the device), and keep only cheap random augmentation per sample.",
+    "expected_effect": "At most 1.39x if data wait disappears entirely.",
+    "risk": "low",
+    "risk_note": "Only safe if the cached or vectorized path produces the same tensors. compare's loss check catches a transform that changed.",
+    "tags": [
+      "data"
+    ]
+  },
+  {
+    "id": "no_mixed_precision",
+    "title": "No mixed precision on hardware that supports it",
+    "score": 0.01846936191724243,
+    "score_basis": "0.1 x compute ('other') share of step time",
+    "evidence": "Device mps, this torch build supports autocast on MPS; autocast was never entered and parameters are float32. 18% of step time is compute and Python ('other').",
+    "numbers": {
+      "device": "mps",
+      "autocast_used": false,
+      "param_dtypes": [
+        "float32"
+      ],
+      "compute_share": 0.1846936191724243
+    },
+    "suggestion": "Wrap the forward pass and loss in `with torch.autocast('mps', dtype=torch.float16):`. Gains on Apple GPUs vary by op, so measure.",
+    "expected_effect": "Largest on compute-bound models dominated by matmuls and convolutions; little or none when data loading or sync dominates.",
+    "risk": "medium",
+    "risk_note": "Lower precision changes numerics. bf16 rarely needs loss scaling; fp16 needs GradScaler. Check the loss trajectory with compare.",
+    "tags": [
+      "compute",
+      "numerics"
+    ]
+  }
+]

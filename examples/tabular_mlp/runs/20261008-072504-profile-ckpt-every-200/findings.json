@@ -1,0 +1,86 @@
+[
+  {
+    "id": "dataloader_bound",
+    "title": "Training waits on the DataLoader (num_workers=0)",
+    "score": 0.3430477992612761,
+    "score_basis": "measured data-wait share of step time",
+    "evidence": "34% of step time is spent waiting for the next batch (13.7 ms per step) and the DataLoader runs with num_workers=0, so loading and the training step take turns on one core.",
+    "numbers": {
+      "data_wait_share": 0.3430477992612761,
+      "data_wait_ms_per_step": 13.704802449792624,
+      "num_workers": 0,
+      "pin_memory": false,
+      "suggested_workers": 5
+    },
+    "suggestion": "Set num_workers=5 and persistent_workers=True on the DataLoader. On macOS and Windows workers start with spawn: keep the training code under `if __name__ == \"__main__\":` and make sure the dataset pickles.",
+    "expected_effect": "At most 1.52x (the step time without any data wait), reached only if loading fully overlaps compute.",
+    "risk": "low",
+    "risk_note": "Deterministic datasets give identical batches. Random augmentation in workers draws from per-worker RNG streams, so exact samples differ (same distribution). Each worker holds a copy of the dataset in memory.",
+    "tags": [
+      "data"
+    ]
+  },
+  {
+    "id": "cpu_bound_preprocessing",
+    "title": "Per-sample preprocessing in RawRows is expensive",
+    "score": 0.2118248005276179,
+    "score_basis": "data-wait share times the __getitem__ share of it, times 0.9 so the one-line worker fix ranks first when both apply",
+    "evidence": "34% of step time is data wait and 69% of that is inside RawRows.__getitem__ (0.04 ms per sample).",
+    "numbers": {
+      "data_wait_share": 0.3430477992612761,
+      "getitem_share_of_data_wait": 0.6860877404896939,
+      "getitem_ms_per_sample": 0.03672928494779626,
+      "num_workers": 0,
+      "proc_cpu_pct_mean": 45.1875
+    },
+    "suggestion": "Make preprocessing cheaper instead of (or as well as) parallelizing it: precompute or cache deterministic transforms once, move per-element Python loops to vectorized tensor ops on the whole batch (or on the device), and keep only cheap random augmentation per sample.",
+    "expected_effect": "At most 1.52x if data wait disappears entirely.",
+    "risk": "low",
+    "risk_note": "Only safe if the cached or vectorized path produces the same tensors. compare's loss check catches a transform that changed.",
+    "tags": [
+      "data"
+    ]
+  },
+  {
+    "id": "no_mixed_precision",
+    "title": "No mixed precision on hardware that supports it",
+    "score": 0.06258214474574607,
+    "score_basis": "0.1 x compute ('other') share of step time",
+    "evidence": "Device mps, this torch build supports autocast on MPS; autocast was never entered and parameters are float32. 63% of step time is compute and Python ('other').",
+    "numbers": {
+      "device": "mps",
+      "autocast_used": false,
+      "param_dtypes": [
+        "float32"
+      ],
+      "compute_share": 0.6258214474574607
+    },
+    "suggestion": "Wrap the forward pass and loss in `with torch.autocast('mps', dtype=torch.float16):`. Gains on Apple GPUs vary by op, so measure.",
+    "expected_effect": "Largest on compute-bound models dominated by matmuls and convolutions; little or none when data loading or sync dominates.",
+    "risk": "medium",
+    "risk_note": "Lower precision changes numerics. bf16 rarely needs loss scaling; fp16 needs GradScaler. Check the loss trajectory with compare.",
+    "tags": [
+      "compute",
+      "numerics"
+    ]
+  },
+  {
+    "id": "no_torch_compile",
+    "title": "torch.compile is not used",
+    "score": 0.01877464342372382,
+    "score_basis": "prior 0.03 for mps x compute ('other') share",
+    "evidence": "torch 2.14.1 supports torch.compile and it was never called. 63% of step time is compute and Python overhead, which is what compilation reduces.",
+    "numbers": {
+      "torch": "2.14.1",
+      "device": "mps",
+      "compute_share": 0.6258214474574607
+    },
+    "suggestion": "Try `model = torch.compile(model)`. Support for MPS is newer than for CUDA and CPU; expect some models to fall back or run slower. Compare with more warmup steps (for example --warmup-steps 20): compilation happens in the first steps.",
+    "expected_effect": "Fewer kernel launches and less Python overhead per step. Compilation adds startup time, so it pays off on long runs.",
+    "risk": "low",
+    "risk_note": "Same math in principle, but fused kernels can differ in the last bits, and graph breaks or recompiles can make a run slower. Measure.",
+    "tags": [
+      "compute"
+    ]
+  }
+]

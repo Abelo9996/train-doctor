@@ -1,0 +1,82 @@
+[
+  {
+    "id": "host_sync_in_loop",
+    "title": "Host waits on the device inside every step",
+    "score": 0.18546059039604454,
+    "score_basis": "half the measured sync share (time inside a sync includes device work that still has to run)",
+    "evidence": "2.0 blocking reads of mps tensors per step (.item(), .cpu(), .tolist(), float(), bool() or synchronize()), 6.5 ms per step blocked in them (37% of step time).",
+    "numbers": {
+      "sync_calls_per_step": 2.0,
+      "sync_ms_per_step": 6.546076778652131,
+      "sync_share": 0.3709211807920891,
+      "device": "mps"
+    },
+    "suggestion": "Keep running metrics on the device (for example running_loss += loss.detach()) and read them with .item() only when you log, every N steps. Avoid float(t), bool(t), .cpu() and printing tensors inside the step.",
+    "expected_effect": "Lets the host queue step N+1 while the device still runs step N. The gain is at most the host-side time per step that is currently serialized; large on small models, small on big ones.",
+    "risk": "none",
+    "risk_note": "Training math is unchanged; you log less often.",
+    "tags": [
+      "sync"
+    ]
+  },
+  {
+    "id": "no_mixed_precision",
+    "title": "No mixed precision on hardware that supports it",
+    "score": 0.05682677891000364,
+    "score_basis": "0.1 x compute ('other') share of step time",
+    "evidence": "Device mps, this torch build supports autocast on MPS; autocast was never entered and parameters are float32. 57% of step time is compute and Python ('other').",
+    "numbers": {
+      "device": "mps",
+      "autocast_used": false,
+      "param_dtypes": [
+        "float32"
+      ],
+      "compute_share": 0.5682677891000364
+    },
+    "suggestion": "Wrap the forward pass and loss in `with torch.autocast('mps', dtype=torch.float16):`. Gains on Apple GPUs vary by op, so measure.",
+    "expected_effect": "Largest on compute-bound models dominated by matmuls and convolutions; little or none when data loading or sync dominates.",
+    "risk": "medium",
+    "risk_note": "Lower precision changes numerics. bf16 rarely needs loss scaling; fp16 needs GradScaler. Check the loss trajectory with compare.",
+    "tags": [
+      "compute",
+      "numerics"
+    ]
+  },
+  {
+    "id": "logging_in_hot_loop",
+    "title": "Logging on every step",
+    "score": 0.02,
+    "score_basis": "measured stdout/stderr write share (floor 0.02 when logging every step)",
+    "evidence": "1.0 lines written to stdout/stderr per step, 0% of step time spent writing them. Printing a metric usually needs .item(), which also forces a device sync.",
+    "numbers": {
+      "log_lines_per_step": 1.0,
+      "log_write_share": 0.0008376004932738867
+    },
+    "suggestion": "Log every N steps (for example every 50) and aggregate metrics on the device in between.",
+    "expected_effect": "Small by itself; larger when each log line also forces a device sync.",
+    "risk": "none",
+    "risk_note": "Training is unchanged.",
+    "tags": [
+      "io"
+    ]
+  },
+  {
+    "id": "no_torch_compile",
+    "title": "torch.compile is not used",
+    "score": 0.01704803367300109,
+    "score_basis": "prior 0.03 for mps x compute ('other') share",
+    "evidence": "torch 2.14.1 supports torch.compile and it was never called. 57% of step time is compute and Python overhead, which is what compilation reduces.",
+    "numbers": {
+      "torch": "2.14.1",
+      "device": "mps",
+      "compute_share": 0.5682677891000364
+    },
+    "suggestion": "Try `model = torch.compile(model)`. Support for MPS is newer than for CUDA and CPU; expect some models to fall back or run slower. Compare with more warmup steps (for example --warmup-steps 20): compilation happens in the first steps.",
+    "expected_effect": "Fewer kernel launches and less Python overhead per step. Compilation adds startup time, so it pays off on long runs.",
+    "risk": "low",
+    "risk_note": "Same math in principle, but fused kernels can differ in the last bits, and graph breaks or recompiles can make a run slower. Measure.",
+    "tags": [
+      "compute"
+    ]
+  }
+]

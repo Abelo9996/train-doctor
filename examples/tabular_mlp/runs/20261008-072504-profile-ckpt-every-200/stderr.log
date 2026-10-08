@@ -1,0 +1,3 @@
+USDT:2026-10-08 07:25:09 86802:112605653 SyncActivityProfilerHandler.cpp:39] profiler_start
+USDT:2026-10-08 07:25:09 86802:112605653 SyncActivityProfilerHandler.cpp:46] profiler_stop
+[train-doctor] measurement window complete after 60 steps, stopping the run

@@ -1,0 +1,4 @@
+step 50 loss 2.0699 acc 0.299
+step 100 loss 1.2923 acc 0.618
+step 150 loss 1.1845 acc 0.675
+step 200 loss 1.0533 acc 0.739

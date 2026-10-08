@@ -1,0 +1,447 @@
+{
+ "profiled_steps": 5,
+ "device": "mps",
+ "ops": [
+  {
+   "name": "enumerate(DataLoader)#_SingleProcessDataLoaderIter.__next__",
+   "count": 5,
+   "self_cpu_us": 36059.685999999696,
+   "cpu_total_us": 39713.19499999999,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::copy_",
+   "count": 234,
+   "self_cpu_us": 18078.597999999984,
+   "cpu_total_us": 18123.949999999968,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::mm",
+   "count": 35,
+   "self_cpu_us": 1677.2479999999778,
+   "cpu_total_us": 1677.2479999999778,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::linear",
+   "count": 20,
+   "self_cpu_us": 1553.0989999999583,
+   "cpu_total_us": 1611.036999999953,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::addcmul_",
+   "count": 40,
+   "self_cpu_us": 1490.7860000000219,
+   "cpu_total_us": 1490.7860000000219,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::addcdiv_",
+   "count": 40,
+   "self_cpu_us": 1324.8960000000225,
+   "cpu_total_us": 1324.8960000000225,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "Optimizer.step#AdamW.step",
+   "count": 5,
+   "self_cpu_us": 1258.1950000000215,
+   "cpu_total_us": 5559.540999999997,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::empty",
+   "count": 2628,
+   "self_cpu_us": 851.3270000003085,
+   "cpu_total_us": 851.3270000003085,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::nll_loss_forward",
+   "count": 5,
+   "self_cpu_us": 846.5850000000646,
+   "cpu_total_us": 899.5130000000208,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::cat",
+   "count": 10,
+   "self_cpu_us": 811.2519999999931,
+   "cpu_total_us": 882.0180000000109,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::_log_softmax",
+   "count": 5,
+   "self_cpu_us": 735.8859999999986,
+   "cpu_total_us": 735.8859999999986,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::nll_loss_backward",
+   "count": 5,
+   "self_cpu_us": 656.2670000000071,
+   "cpu_total_us": 656.2670000000071,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::threshold_backward",
+   "count": 15,
+   "self_cpu_us": 636.6340000000055,
+   "cpu_total_us": 636.6340000000055,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::detach_",
+   "count": 2560,
+   "self_cpu_us": 620.1079999996291,
+   "cpu_total_us": 850.3319999995438,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::stack",
+   "count": 10,
+   "self_cpu_us": 615.2070000001258,
+   "cpu_total_us": 1922.6070000000327,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::_log_softmax_backward_data",
+   "count": 5,
+   "self_cpu_us": 358.4640000000072,
+   "cpu_total_us": 358.4640000000072,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::sum",
+   "count": 20,
+   "self_cpu_us": 277.820000000007,
+   "cpu_total_us": 297.04800000002433,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::unsqueeze",
+   "count": 1280,
+   "self_cpu_us": 266.13499999984924,
+   "cpu_total_us": 410.7569999999105,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "Optimizer.zero_grad#AdamW.zero_grad",
+   "count": 5,
+   "self_cpu_us": 246.93499999999767,
+   "cpu_total_us": 246.93499999999767,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "detach_",
+   "count": 2560,
+   "self_cpu_us": 230.22399999991467,
+   "cpu_total_us": 230.22399999991467,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::mul_",
+   "count": 80,
+   "self_cpu_us": 229.89299999998184,
+   "cpu_total_us": 313.783999999956,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::sqrt",
+   "count": 40,
+   "self_cpu_us": 206.78699999995297,
+   "cpu_total_us": 206.78699999995297,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::as_strided",
+   "count": 1340,
+   "self_cpu_us": 202.15200000006007,
+   "cpu_total_us": 202.15200000006007,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::_to_copy",
+   "count": 210,
+   "self_cpu_us": 198.53100000006089,
+   "cpu_total_us": 6239.776000000042,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::to",
+   "count": 2795,
+   "self_cpu_us": 180.17700000021432,
+   "cpu_total_us": 6419.953000000256,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::add_",
+   "count": 80,
+   "self_cpu_us": 168.05500000003667,
+   "cpu_total_us": 302.94899999999325,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::empty_strided",
+   "count": 235,
+   "self_cpu_us": 153.27500000000873,
+   "cpu_total_us": 153.27500000000873,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::div",
+   "count": 40,
+   "self_cpu_us": 147.95900000003166,
+   "cpu_total_us": 201.43800000002375,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::relu",
+   "count": 15,
+   "self_cpu_us": 119.76700000002165,
+   "cpu_total_us": 167.27900000000955,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::set_",
+   "count": 48,
+   "self_cpu_us": 101.30400000001964,
+   "cpu_total_us": 101.30400000001964,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::lerp_",
+   "count": 40,
+   "self_cpu_us": 100.91599999993923,
+   "cpu_total_us": 100.91599999993923,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::linear_backward",
+   "count": 20,
+   "self_cpu_us": 96.67699999996694,
+   "cpu_total_us": 2128.5249999999796,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "autograd::engine::evaluate_function: LinearBackward0",
+   "count": 20,
+   "self_cpu_us": 82.64600000006612,
+   "cpu_total_us": 2234.856000000029,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::lift_fresh",
+   "count": 2560,
+   "self_cpu_us": 77.35500000009779,
+   "cpu_total_us": 77.35500000009779,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::fill_",
+   "count": 10,
+   "self_cpu_us": 58.88699999997334,
+   "cpu_total_us": 58.88699999997334,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "autograd::engine::evaluate_function: ReluBackward0",
+   "count": 15,
+   "self_cpu_us": 47.88300000000163,
+   "cpu_total_us": 716.8040000000183,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "detach",
+   "count": 53,
+   "self_cpu_us": 45.201999999991585,
+   "cpu_total_us": 45.201999999991585,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "autograd::engine::evaluate_function: torch::autograd::AccumulateGrad",
+   "count": 40,
+   "self_cpu_us": 38.97000000003027,
+   "cpu_total_us": 115.73399999993853,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::narrow",
+   "count": 5,
+   "self_cpu_us": 33.6650000000227,
+   "cpu_total_us": 70.76600000001781,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "autograd::engine::evaluate_function: NllLossBackward0",
+   "count": 5,
+   "self_cpu_us": 33.41600000001199,
+   "cpu_total_us": 710.6999999999971,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "torch::autograd::AccumulateGrad",
+   "count": 40,
+   "self_cpu_us": 33.045999999914784,
+   "cpu_total_us": 76.76399999990826,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "ReluBackward0",
+   "count": 15,
+   "self_cpu_us": 32.287000000011176,
+   "cpu_total_us": 668.9210000000166,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::cross_entropy_loss",
+   "count": 5,
+   "self_cpu_us": 28.684999999968568,
+   "cpu_total_us": 1701.9579999999842,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::view",
+   "count": 20,
+   "self_cpu_us": 27.70900000000256,
+   "cpu_total_us": 27.70900000000256,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::empty_like",
+   "count": 25,
+   "self_cpu_us": 25.6019999999844,
+   "cpu_total_us": 72.4879999999539,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::expand_as",
+   "count": 10,
+   "self_cpu_us": 24.375999999960186,
+   "cpu_total_us": 45.3519999999844,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "LinearBackward0",
+   "count": 20,
+   "self_cpu_us": 23.68499999998312,
+   "cpu_total_us": 2152.2099999999627,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::detach",
+   "count": 53,
+   "self_cpu_us": 22.8259999999957,
+   "cpu_total_us": 68.02799999998729,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::slice",
+   "count": 5,
+   "self_cpu_us": 22.68399999999383,
+   "cpu_total_us": 37.10099999999511,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "LogSoftmaxBackward0",
+   "count": 5,
+   "self_cpu_us": 21.76899999998568,
+   "cpu_total_us": 380.2329999999929,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "NllLossBackward0",
+   "count": 5,
+   "self_cpu_us": 21.016999999977998,
+   "cpu_total_us": 677.2839999999851,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "autograd::engine::evaluate_function: LogSoftmaxBackward0",
+   "count": 5,
+   "self_cpu_us": 15.854000000021188,
+   "cpu_total_us": 396.0870000000141,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::item",
+   "count": 40,
+   "self_cpu_us": 14.790000000008149,
+   "cpu_total_us": 24.141000000032363,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::log_softmax",
+   "count": 5,
+   "self_cpu_us": 14.459000000002561,
+   "cpu_total_us": 752.1790000000037,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::transpose",
+   "count": 20,
+   "self_cpu_us": 13.937000000078115,
+   "cpu_total_us": 26.47100000004866,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::expand",
+   "count": 10,
+   "self_cpu_us": 13.709000000017113,
+   "cpu_total_us": 20.976000000024214,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::t",
+   "count": 20,
+   "self_cpu_us": 13.54099999992468,
+   "cpu_total_us": 40.01199999997334,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::select",
+   "count": 5,
+   "self_cpu_us": 12.625,
+   "cpu_total_us": 16.70900000000256,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::nll_loss_nd",
+   "count": 5,
+   "self_cpu_us": 11.122999999992317,
+   "cpu_total_us": 921.0940000000119,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::nll_loss",
+   "count": 5,
+   "self_cpu_us": 10.45799999999872,
+   "cpu_total_us": 909.9710000000196,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::_local_scalar_dense",
+   "count": 40,
+   "self_cpu_us": 9.351000000024214,
+   "cpu_total_us": 9.351000000024214,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::ones_like",
+   "count": 5,
+   "self_cpu_us": 6.666000000011991,
+   "cpu_total_us": 57.10199999999895,
+   "self_device_us": 0.0
+  },
+  {
+   "name": "aten::resize_",
+   "count": 10,
+   "self_cpu_us": 2.7920000000012806,
+   "cpu_total_us": 2.7920000000012806,
+   "self_device_us": 0.0
+  }
+ ]
+}
