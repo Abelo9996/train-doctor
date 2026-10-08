@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import sys
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = ["__version__", "step"]
 

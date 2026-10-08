@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "train-doctor"
-version = "0.1.0"
+version = "0.1.1"
 description = "Give your agent a way to find out why a training run is slow, fix it, and prove the speedup."
 readme = "README.md"
 license = "MIT"
