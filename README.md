@@ -8,10 +8,6 @@ uvx train-doctor compare --baseline "python train.py" --candidate "python train.
 uvx train-doctor setup                             # give Claude Code, Codex and Cursor the MCP tools
 ```
 
-> Not on PyPI yet. Until the first release, run it straight from GitHub by replacing `uvx train-doctor` with
-> `uvx --from git+https://github.com/Abelo9996/train-doctor train-doctor`. `setup` registers `uvx train-doctor mcp`, so it works once the
-> package is on PyPI.
-
 ## Example output
 
 From a real run in this repo: [examples/cnn_images](examples/cnn_images), a small CNN written the way many
