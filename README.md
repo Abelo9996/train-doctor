@@ -4,11 +4,22 @@ Give your agent a way to find out why your training run is slow, fix it, and pro
 
 ```bash
 uvx train-doctor profile -- python train.py        # where does step time go?
-uvx train-doctor compare --baseline "python train.py" --candidate "python train.py --num-workers 4"
+uvx train-doctor compare --baseline "python train.py" --candidate "python train_fixed.py"  # did the fix help?
 uvx train-doctor setup                             # give Claude Code, Codex and Cursor the MCP tools
 ```
 
+Run it from the environment that has your training dependencies (an activated venv or conda env), or
+give the interpreter's full path: `uvx train-doctor profile -- .venv/bin/python train.py`. train-doctor
+doesn't install torch; it runs your command with your interpreter. It needs [uv](https://docs.astral.sh/uv/)
+for `uvx` (or `pip install train-doctor`). A profile takes a few seconds past your script's startup.
+
 ## Example output
+
+![train-doctor profile on examples/cnn_images](https://raw.githubusercontent.com/Abelo9996/train-doctor/main/docs/profile.gif)
+
+The recording above is a real 0.1.1 run of `train-doctor profile` on [examples/cnn_images](examples/cnn_images)
+(made with [vhs](https://github.com/charmbracelet/vhs) from [docs/profile.tape](docs/profile.tape)), on a
+shared machine, so its numbers differ from the run below.
 
 From a real run in this repo: [examples/cnn_images](examples/cnn_images), a small CNN written the way many
 first scripts are (per-sample augmentation in `__getitem__`, `num_workers=0`, `.item()` and a print on every
@@ -49,6 +60,45 @@ was inconclusive with 5 repeats (1.54x, interval 0.62 to 2.67) and clearly faste
 original vs final there is 3.05x (2.15 to 3.40) with an identical loss trajectory. Every report, per-repeat
 number and raw trace is committed under `examples/*/runs/`, and
 [examples/run_validation.sh](examples/run_validation.sh) is the exact command sequence.
+
+## Use it with your agent
+
+Run `uvx train-doctor setup --yes`, open your training project in Claude Code (or Codex or Cursor) and type
+what you'd say to a colleague:
+
+```text
+train.py is way slower than it should be. Can you figure out why, make it faster, and show me the
+speedup is real and didn't change the training?
+```
+
+That exact prompt was given to a headless Claude Code session (`claude -p`, train-doctor 0.1.1 as its
+only MCP server, the skill as project instructions) on a copy of
+[examples/cnn_images/train.py](examples/cnn_images/train.py). Other heavy jobs were running on the same
+Apple M4 at the time (the 1-minute load average reached 45 on 10 cores). Excerpts, with tool calls
+shortened and text verbatim:
+
+```text
+profile(["python", "train.py"])
+  next_step: Make one change for [dataloader_bound] ...
+agent: Top finding: data loading (35% of step time, num_workers=0). Comparing `--num-workers 5`.
+compare(... "--num-workers", "5")
+  decision: inconclusive
+  reason: no clear difference: the 95% interval 0.11 to 22.99 does not clear the 2% threshold on either side
+agent: Other processes I don't own (`ugrep`, another Python) are using CPU, so I'll leave them alone
+       and rerun with more repeats and a longer window, as the tool suggests.
+...
+compare(..., repeats=17, seconds=4)
+  reason: candidate is faster (1.16x, 95% interval 1.05 to 1.55) and the loss trajectory is within tolerance
+agent: The 1.16x is the confirmed figure, and 1.05x is the most I'd promise.
+```
+
+It also tried logging every 50 steps and float16 autocast on top, got "no clear difference" for both, and
+dropped them. Two honest notes from reading the transcript. The workers change was only kept on the third
+try (5, then 9, then 17 repeats), and rerunning until a comparison says `keep` inflates false wins, so
+0.1.1 no longer suggests more than 9 repeats and tells the agent to rerun later when the machine was busy.
+And an earlier session with 0.1.0 found a real bug: under `uvx`, a bare `python` in the command started
+train-doctor's own interpreter, which has no torch. The agent worked around it ("The MCP server's
+`python` resolved to an interpreter without torch; I'll use the venv interpreter explicitly"); 0.1.1 fixes it.
 
 ## How it works
 
@@ -107,7 +157,9 @@ adds `[mcp_servers.train-doctor]` to `~/.codex/config.toml`, adds the server to 
 skill to `~/.claude/skills/train-doctor/` and `~/.codex/skills/train-doctor/`. It backs up every file it edits and
 does nothing when an entry is already there. `--project DIR` also writes a project `.mcp.json`.
 
-MCP tools: `profile`, `diagnose`, `compare`, `report`, `version`. The skill
+MCP tools: `profile`, `diagnose`, `compare`, `report`, `version`. Every `profile` and `compare` result
+has a `next_step` that says what to do next, and a command that fails before its first step returns an
+`error` with the last stderr lines and the fix. The skill
 ([skills/train-doctor/SKILL.md](skills/train-doctor/SKILL.md)) tells the agent the workflow: profile, read
 the findings, change one thing, compare, keep only clear wins that don't move the loss, report.
 
