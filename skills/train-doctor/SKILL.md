@@ -45,7 +45,9 @@ Tools (MCP) or CLI equivalents:
    verdict `faster` (the whole interval clears 1 + min_effect) and the loss
    trajectory `identical` or `within tolerance`. If the decision is
    `inconclusive`, say so and either drop the change or rerun with more
-   repeats. If it is `reject`, revert it.
+   repeats (`--repeats 9`) or a longer window (`--seconds 4`). If it is
+   `reject`, revert it. Give each run a `--label` so the run directories
+   read as a history of what was tried.
 6. **Stack.** The kept candidate becomes the new baseline. Profile it again
    (the bottleneck moves) and repeat from step 2.
 7. **Report.** Give the user the compare report path(s) and quote the numbers

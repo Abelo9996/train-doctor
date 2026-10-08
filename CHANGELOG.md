@@ -9,4 +9,5 @@ First version.
 - `compare`: discarded warmup runs, K repeats per arm in randomized pair order, same seed, median and spread, bootstrap interval on the ratio of medians, a verdict that refuses to call changes inside the noise, and a loss-trajectory check.
 - `report`: Markdown and JSON bundles with machine, versions, commands, per-repeat numbers, findings, verdict and limits.
 - `setup`: registers the MCP server with Claude Code, Codex and Cursor and installs the skill, with a dry run, backups and idempotent re-runs.
+- `--label` names run directories; unstartable commands give a clear error instead of a traceback.
 - MCP server over stdio with `profile`, `diagnose`, `compare`, `report` and `version` tools.
