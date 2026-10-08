@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as _dt
 import random
 import shlex
+import shutil
 from pathlib import Path
 
 from train_doctor import lossdiff, report
@@ -18,7 +19,7 @@ from train_doctor.evidence import write_evidence
 from train_doctor.machine import command_provenance, machine_info
 from train_doctor.redact import dump_json
 from train_doctor.rules import diagnose as run_rules
-from train_doctor.runner import RunConfig, run
+from train_doctor.runner import CommandError, RunConfig, run
 from train_doctor.stats import bootstrap_ratio_ci, describe, mann_whitney_u, verdict
 
 DEFAULT_OUT = ".train-doctor/runs"
@@ -109,7 +110,11 @@ def profile(
         seed=seed,
         echo=echo,
     )
-    ev = _single_run(cfg, run_dir, machine_info(), "profile", label)
+    try:
+        ev = _single_run(cfg, run_dir, machine_info(), "profile", label)
+    except CommandError:
+        shutil.rmtree(run_dir, ignore_errors=True)
+        raise
     findings = [f.to_dict() for f in run_rules(ev)]
     dump_json(run_dir / "findings.json", findings)
     report.write(run_dir)
@@ -190,6 +195,11 @@ def compare(
             pair.reverse()
         schedule += [("measure", pair[0], i), ("measure", pair[1], i)]
 
+    for arm, argv in arms.items():
+        if not argv or (shutil.which(argv[0]) is None and not Path(cwd, argv[0]).exists()):
+            shutil.rmtree(root, ignore_errors=True)
+            hint = " (in zsh, an unquoted $VAR is not split into words)" if argv and " " in argv[0] else ""
+            raise CommandError(f"{arm} command not found: {argv[:1]!r}{hint}")
     runs: list[dict] = []
     for order, (phase, arm, idx) in enumerate(schedule):
         sub = root / ("warmup" if phase == "warmup" else arm) / (f"{arm}-{idx}" if phase == "warmup" else f"rep-{idx}")

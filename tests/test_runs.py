@@ -168,3 +168,13 @@ def test_script_that_ends_early_is_flagged(tmp_path, script):
     ev = api.profile(cmd, out_dir=tmp_path / "runs", profiler_steps=0, **FAST)["evidence"]
     assert ev["steps"]["end_reason"] == "process_exit"
     assert any("did not complete" in lim for lim in ev["limits"])
+
+
+def test_missing_command_is_a_clear_error(tmp_path, capsys):
+    out = str(tmp_path / "runs")
+    assert main(["profile", "--out", out, "--", "python examples/nope.py"]) == 2
+    err = capsys.readouterr().err
+    assert "could not start" in err and "one argument" in err
+    assert not list((tmp_path / "runs").iterdir())
+    assert main(["compare", "--out", out, "--baseline", "no-such-binary-xyz", "--candidate", "no-such-binary-xyz"]) == 2
+    assert "command not found" in capsys.readouterr().err

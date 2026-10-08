@@ -31,6 +31,10 @@ HOOK_DIR = Path(__file__).parent / "_hook"
 LOSS_RE = re.compile(r"(?i)\bloss['\"]?\s*[:=]?\s*(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)")
 
 
+class CommandError(RuntimeError):
+    """The training command could not be started."""
+
+
 @dataclass
 class RunConfig:
     cmd: list[str]
@@ -183,15 +187,21 @@ def run(cfg: RunConfig, run_dir: Path) -> dict:
     except OSError:
         load_1m = None
     t0 = time.time()
-    proc = subprocess.Popen(
-        cfg.cmd,
-        cwd=cfg.cwd,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    try:
+        proc = subprocess.Popen(
+            cfg.cmd,
+            cwd=cfg.cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as e:
+        hint = ""
+        if len(cfg.cmd) == 1 and " " in cfg.cmd[0]:
+            hint = " The whole command arrived as one argument; pass it as separate words (in zsh, an unquoted $VAR is not split)."
+        raise CommandError(f"could not start {cfg.cmd!r}: {e.strerror or e}.{hint}") from e
     readers = [
         threading.Thread(
             target=_reader, args=(proc.stdout, run_dir / "stdout.log", run_dir / "log_losses.jsonl", cfg.echo, "out"), daemon=True

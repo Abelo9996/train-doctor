@@ -118,6 +118,16 @@ def _print_findings(findings: list[dict]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from train_doctor.runner import CommandError
+
+    try:
+        return _dispatch(args)
+    except (CommandError, FileNotFoundError, ValueError) as e:
+        print(f"train-doctor: {e}", file=sys.stderr)
+        return 2
+
+
+def _dispatch(args: argparse.Namespace) -> int:
 
     if args.command == "profile":
         cmd = _strip_dashdash(args.cmd)
