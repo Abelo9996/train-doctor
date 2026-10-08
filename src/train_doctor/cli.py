@@ -19,6 +19,7 @@ def _add_window(p: argparse.ArgumentParser) -> None:
     p.add_argument("--out", default=api.DEFAULT_OUT, help=f"where run directories go (default {api.DEFAULT_OUT})")
     p.add_argument("--echo", action="store_true", help="stream the command's output to stderr")
     p.add_argument("--json", action="store_true", help="print machine-readable JSON")
+    p.add_argument("--label", default=None, help="short name added to the run directory and report title")
 
 
 def _strip_dashdash(cmd: list[str]) -> list[str]:
@@ -138,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
             out_dir=args.out,
             echo=args.echo,
+            label=args.label,
         )
         if args.json:
             ev = res["evidence"]
@@ -187,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
             order_seed=args.order_seed,
             out_dir=args.out,
             echo=args.echo,
+            label=args.label,
             progress=None if args.json else (lambda msg: print(msg, file=sys.stderr)),
         )
         if args.json:

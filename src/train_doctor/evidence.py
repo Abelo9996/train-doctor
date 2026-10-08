@@ -377,7 +377,10 @@ def summarize(run_dir: Path) -> dict:
     ev["resources"] = resource_summary(run_dir, win.get("wall_start"), win.get("wall_end"), machine.get("cores_logical"))
     ev["profiler"] = profiler_summary(run_dir)
     ev["py_spy"] = pyspy_summary(run_dir)
-    ev["run"] = {k: run.get(k) for k in ("cmd", "cwd", "started_at", "wall_s", "exit_code", "timed_out", "env_set", "provenance")}
+    ev["run"] = {
+        k: run.get(k)
+        for k in ("cmd", "cwd", "started_at", "wall_s", "exit_code", "timed_out", "env_set", "provenance", "label", "load_avg_1m")
+    }
     first = (ev.get("config") or {}).get("first_step_wall")
     if first and run.get("start_wall"):
         ev["run"]["time_to_first_step_s"] = first - run["start_wall"]

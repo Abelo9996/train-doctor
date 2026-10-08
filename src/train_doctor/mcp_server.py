@@ -67,6 +67,7 @@ def build_server():
         profiler_steps: int = 5,
         py_spy: bool = False,
         out_dir: str = api.DEFAULT_OUT,
+        label: str = "",
     ) -> dict:
         """Run a training command for a bounded window and collect evidence, then diagnose it.
 
@@ -86,6 +87,7 @@ def build_server():
                 profiler_steps=profiler_steps,
                 py_spy=py_spy,
                 out_dir=out_dir,
+                label=label or None,
             )
         )
 
@@ -109,6 +111,7 @@ def build_server():
         min_effect: float = 0.02,
         timeout: float = 600.0,
         out_dir: str = api.DEFAULT_OUT,
+        label: str = "",
     ) -> dict:
         """Benchmark baseline vs candidate commands (argv lists) with repeats in randomized pair order.
 
@@ -130,6 +133,7 @@ def build_server():
             min_effect=min_effect,
             timeout=timeout,
             out_dir=out_dir,
+            label=label or None,
         )
         res = {k: v for k, v in res.items() if k != "machine"}
         res["report"] = res["root"] + "/report.md"

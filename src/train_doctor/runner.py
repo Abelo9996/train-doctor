@@ -178,6 +178,10 @@ def run(cfg: RunConfig, run_dir: Path) -> dict:
     run_dir.mkdir(parents=True, exist_ok=True)
     env = build_env(cfg, run_dir)
     started = _now_iso()
+    try:
+        load_1m = round(os.getloadavg()[0], 2)
+    except OSError:
+        load_1m = None
     t0 = time.time()
     proc = subprocess.Popen(
         cfg.cmd,
@@ -222,6 +226,7 @@ def run(cfg: RunConfig, run_dir: Path) -> dict:
         "cwd": os.path.abspath(cfg.cwd),
         "started_at": started,
         "start_wall": t0,
+        "load_avg_1m": load_1m,
         "wall_s": round(wall, 3),
         "exit_code": proc.returncode,
         "timed_out": timed_out,

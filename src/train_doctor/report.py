@@ -77,9 +77,11 @@ def render_profile(ev: dict, findings: list[dict], d: Path) -> str:
     tp = ev.get("throughput") or {}
     win = ev.get("window") or {}
     L: list[str] = []
-    L.append("# train-doctor profile\n")
+    L.append("# train-doctor profile" + (f": {run['label']}" if run.get("label") else "") + "\n")
     L.append(f"Command: `{_cmd(run.get('cmd') or [])}`  ")
-    L.append(f"Started {run.get('started_at')}, wall time {_fmt(run.get('wall_s'), 1, ' s')}, exit code {run.get('exit_code')}.  ")
+    L.append(
+        f"Started {run.get('started_at')}, wall time {_fmt(run.get('wall_s'), 1, ' s')}, exit code {run.get('exit_code')}, 1-minute load average at start {_fmt(run.get('load_avg_1m'), 2)}.  "
+    )
     L.append(f"Machine: {m.get('cpu')}, {m.get('cores_logical')} logical cores, {_mib(m.get('ram_bytes'))} RAM, {m.get('os')}.  ")
     if t:
         L.append(f"Python {cfg.get('python')}, torch {t.get('version')}, device `{cfg.get('device')}`.")
@@ -231,7 +233,7 @@ def render_compare(r: dict) -> str:
     s = r.get("settings") or {}
     m = r.get("machine") or {}
     unit = "samples/s" if r.get("metric") == "samples_per_s" else "steps/s"
-    L.append("# train-doctor compare\n")
+    L.append("# train-doctor compare" + (f": {r['label']}" if r.get("label") else "") + "\n")
     L.append(f"Decision: **{r.get('decision')}**. {str(r.get('reason', '')).capitalize()}.\n")
     tpb = (r.get("throughput") or {}).get("baseline") or {}
     tpc = (r.get("throughput") or {}).get("candidate") or {}
@@ -273,13 +275,17 @@ def render_compare(r: dict) -> str:
                 )
             L.append("")
     L.append("## Per-repeat numbers (in run order)\n")
-    L.append(f"| # | Phase | Arm | Repeat | {unit} | Exit | Directory |\n|---:|---|---|---:|---:|---:|---|")
+    L.append(
+        f"| # | Phase | Arm | Repeat | {unit} | Exit | System CPU % | Load 1m | Directory |\n|---:|---|---|---:|---:|---:|---:|---:|---|"
+    )
     for run in r.get("runs", []):
         L.append(
-            f"| {run['order'] + 1} | {run['phase']} | {run['arm']} | {run['index']} | {_fmt(run.get('value'), 2)} | {run.get('exit_code')} | `{run['dir']}` |"
+            f"| {run['order'] + 1} | {run['phase']} | {run['arm']} | {run['index']} | {_fmt(run.get('value'), 2)} | {run.get('exit_code')} "
+            f"| {_fmt(run.get('sys_cpu_pct_mean'), 0)} | {_fmt(run.get('load_avg_1m'), 1)} | `{run['dir']}` |"
         )
     L.append(
-        "\nWarmup runs are discarded. Within each run, the first warmup steps are excluded and the window is bracketed by device synchronization.\n"
+        "\nSystem CPU % is the whole machine's CPU use during the run and Load 1m is the load average at its start, so background work shows up there. "
+        "Warmup runs are discarded. Within each run, the first warmup steps are excluded and the window is bracketed by device synchronization.\n"
     )
     if r.get("errors"):
         L.append("## Errors\n")

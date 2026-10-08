@@ -30,10 +30,16 @@ def as_argv(cmd: str | list[str]) -> list[str]:
     return list(cmd)
 
 
-def new_run_dir(out_dir: str | Path, kind: str) -> Path:
+def _slug(label: str) -> str:
+    return "".join(c if c.isalnum() else "-" for c in label.lower()).strip("-")[:40]
+
+
+def new_run_dir(out_dir: str | Path, kind: str, label: str | None = None) -> Path:
     base = Path(out_dir)
     base.mkdir(parents=True, exist_ok=True)
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    if label:
+        kind = f"{kind}-{_slug(label)}"
     d = base / f"{stamp}-{kind}"
     i = 1
     while d.exists():
@@ -63,9 +69,10 @@ def resolve_run(run_dir: str | Path | None, out_dir: str | Path = DEFAULT_OUT, k
     return p
 
 
-def _single_run(cfg: RunConfig, run_dir: Path, machine: dict, kind: str) -> dict:
+def _single_run(cfg: RunConfig, run_dir: Path, machine: dict, kind: str, label: str | None = None) -> dict:
     meta = run(cfg, run_dir)
     meta["kind"] = kind
+    meta["label"] = label
     meta["machine"] = machine
     meta["provenance"] = command_provenance(cfg.cmd, cfg.cwd)
     dump_json(run_dir / "run.json", meta)
@@ -86,9 +93,10 @@ def profile(
     seed: int | None = None,
     out_dir: str | Path = DEFAULT_OUT,
     echo: bool = False,
+    label: str | None = None,
 ) -> dict:
     argv = as_argv(cmd)
-    run_dir = new_run_dir(out_dir, "profile")
+    run_dir = new_run_dir(out_dir, "profile", label)
     cfg = RunConfig(
         cmd=argv,
         cwd=cwd,
@@ -101,7 +109,7 @@ def profile(
         seed=seed,
         echo=echo,
     )
-    ev = _single_run(cfg, run_dir, machine_info(), "profile")
+    ev = _single_run(cfg, run_dir, machine_info(), "profile", label)
     findings = [f.to_dict() for f in run_rules(ev)]
     dump_json(run_dir / "findings.json", findings)
     report.write(run_dir)
@@ -140,13 +148,14 @@ def compare(
     order_seed: int = 0,
     out_dir: str | Path = DEFAULT_OUT,
     echo: bool = False,
+    label: str | None = None,
     progress=None,
 ) -> dict:
     """Run both commands ``repeats`` times each in randomized pair order and judge the candidate."""
     if repeats < 2:
         raise ValueError("repeats must be at least 2 to estimate spread")
     arms = {"baseline": as_argv(baseline), "candidate": as_argv(candidate)}
-    root = new_run_dir(out_dir, "compare")
+    root = new_run_dir(out_dir, "compare", label)
     machine = machine_info()
 
     def cfg_for(arm: str) -> RunConfig:
@@ -195,6 +204,7 @@ def compare(
 
     result: dict = {
         "kind": "compare",
+        "label": label,
         "root": str(root),
         "commands": {arm: arms[arm] for arm in arms},
         "settings": {
