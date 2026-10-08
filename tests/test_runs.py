@@ -161,3 +161,10 @@ def test_home_is_redacted_in_shared_files(tmp_path, _isolated_home):
         text = (run_dir / name).read_text()
         assert home not in text, name
     assert "~/proj/loop.py" in (run_dir / "run.json").read_text()
+
+
+def test_script_that_ends_early_is_flagged(tmp_path, script):
+    cmd = script("short.py", MARKER_LOOP.replace("range(1000)", "range(6)"))
+    ev = api.profile(cmd, out_dir=tmp_path / "runs", profiler_steps=0, **FAST)["evidence"]
+    assert ev["steps"]["end_reason"] == "process_exit"
+    assert any("did not complete" in lim for lim in ev["limits"])

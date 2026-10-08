@@ -131,6 +131,15 @@ def _metric_value(ev: dict, metric: str) -> float | None:
     return float(v) if v else None
 
 
+def _usable(ev: dict) -> str | None:
+    """None if a run's throughput can be used, else the reason it can't."""
+    if not (ev.get("throughput") or {}).get("steps_per_s"):
+        return "no throughput"
+    if ev.get("source") == "hook" and (ev.get("steps") or {}).get("end_reason") != "window_complete":
+        return f"the measurement window did not complete ({(ev.get('steps') or {}).get('end_reason')})"
+    return None
+
+
 def compare(
     baseline: str | list[str],
     candidate: str | list[str],
@@ -190,12 +199,13 @@ def compare(
         runs.append({"order": order, "phase": phase, "arm": arm, "index": idx, "dir": str(sub.relative_to(root)), "evidence": ev})
 
     measured = [r for r in runs if r["phase"] == "measure"]
-    ok = {arm: [r for r in measured if r["arm"] == arm and (r["evidence"].get("throughput") or {}).get("steps_per_s")] for arm in arms}
+    ok = {arm: [r for r in measured if r["arm"] == arm and _usable(r["evidence"]) is None] for arm in arms}
     errors = []
     for r in measured:
-        if not (r["evidence"].get("throughput") or {}).get("steps_per_s"):
+        why = _usable(r["evidence"])
+        if why:
             errors.append(
-                f"{r['arm']} repeat {r['index']}: no throughput (exit code {r['evidence']['run'].get('exit_code')}); see {r['dir']}/stderr.log"
+                f"{r['arm']} repeat {r['index']}: {why} (exit code {r['evidence']['run'].get('exit_code')}); see {r['dir']}/stderr.log"
             )
 
     both_samples = all(_metric_value(r["evidence"], "samples_per_s") for arm in arms for r in ok[arm]) and all(ok.values())

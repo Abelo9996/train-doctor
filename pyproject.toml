@@ -41,6 +41,7 @@ packages = ["src/train_doctor"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "skills", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]
+exclude = ["examples/*/runs"]
 
 [tool.ruff]
 line-length = 140

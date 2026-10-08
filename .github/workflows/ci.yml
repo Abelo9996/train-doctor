@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install
+        run: |
+          uv venv --python ${{ matrix.python }}
+          uv pip install -e . pytest ruff
+      - name: Lint
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+      - name: Test (no torch)
+        run: uv run --no-sync pytest -q
+
+  torch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install with CPU torch
+        run: |
+          uv venv --python 3.12
+          uv pip install -e . pytest numpy
+          uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Test (with torch)
+        run: uv run --no-sync pytest -q

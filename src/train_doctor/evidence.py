@@ -391,6 +391,11 @@ def summarize(run_dir: Path) -> dict:
     if run.get("exit_code") not in (0, None) and ev.get("steps", {}).get("end_reason") != "window_complete":
         limits.append(f"The command exited with code {run.get('exit_code')} before the window closed; see stderr.log.")
     st = ev.get("steps", {})
+    if ev.get("source") == "hook" and st.get("end_reason") not in ("window_complete", None):
+        limits.append(
+            f"The measurement window did not complete (end: {st.get('end_reason')}) after {st.get('total')} steps; "
+            "the numbers cover only the steps that ran. Lower --steps/--seconds or let the script run longer."
+        )
     if ev.get("source") == "hook" and st.get("measured", 0) < 10:
         limits.append(f"Only {st.get('measured', 0)} measured steps; step-time percentiles are rough.")
     if ev.get("source") == "hook":
