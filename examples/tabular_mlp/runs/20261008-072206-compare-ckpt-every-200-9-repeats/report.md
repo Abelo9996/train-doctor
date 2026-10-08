@@ -11,7 +11,7 @@ Decision: **keep**. Candidate is faster (2.01x, 95% interval 1.54 to 2.52) and t
 | Repeats | 9 | 9 |
 | Process start to first step (median) | 3.22 s | 3.02 s |
 
-Speed ratio (candidate / baseline, median samples/s): **2.005x**, 95% interval 1.542 to 2.524. Verdict: **faster** (threshold: interval must clear 1 +/- 2%). Mann-Whitney U = 81.0, two-sided p = 0.0000.
+Speed ratio (candidate / baseline, median samples/s): **2.005x**, 95% interval 1.542 to 2.524. Verdict: **faster** (threshold: interval must clear 1 +/- 2%). Mann-Whitney U = 81.0, two-sided p < 0.0001.
 
 ## Loss check
 

@@ -254,7 +254,7 @@ def render_compare(r: dict) -> str:
         ra = r["ratio"]
         mw = r.get("mann_whitney") or {}
         L.append(
-            f"Speed ratio (candidate / baseline, median {unit}): **{ra['point']:.3f}x**, 95% interval {ra['low']:.3f} to {ra['high']:.3f}. Verdict: **{r.get('verdict')}** (threshold: interval must clear 1 +/- {s.get('min_effect', 0):.0%}). Mann-Whitney U = {mw.get('u')}, two-sided p = {mw.get('p_two_sided', float('nan')):.4f}.\n"
+            f"Speed ratio (candidate / baseline, median {unit}): **{ra['point']:.3f}x**, 95% interval {ra['low']:.3f} to {ra['high']:.3f}. Verdict: **{r.get('verdict')}** (threshold: interval must clear 1 +/- {s.get('min_effect', 0):.0%}). Mann-Whitney U = {mw.get('u')}, two-sided p {_fmt_p(mw.get('p_two_sided'))}.\n"
         )
     lc = r.get("loss_check")
     if lc:
@@ -310,3 +310,9 @@ def render_compare(r: dict) -> str:
         L.append(f"- {lim}")
     L.append("")
     return "\n".join(L)
+
+def _fmt_p(p: float | None) -> str:
+    """Format a p-value for prose: "= 0.0312", "< 0.0001", or "n/a"."""
+    if p is None or p != p:
+        return "n/a"
+    return "< 0.0001" if p < 0.0001 else f"= {p:.4f}"
