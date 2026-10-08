@@ -14,6 +14,7 @@ Every derived number names the window it was computed over.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from train_doctor.redact import dump_json
@@ -355,6 +356,27 @@ def parse_pyspy_raw(text: str, top: int = 15) -> dict:
     return {"total_samples": total, "own": rank(own), "inclusive": rank(incl)}
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def failure_summary(run_dir: Path, run: dict) -> dict:
+    """Why a command stopped before its window: exit code, last stderr lines and a fix when one is known."""
+    err = Path(run_dir) / "stderr.log"
+    lines = _ANSI.sub("", err.read_text(encoding="utf-8", errors="replace")).rstrip().splitlines() if err.exists() else []
+    tail = "\n".join(lines[-12:])
+    exe = run.get("executable") or (run.get("cmd") or ["?"])[0]
+    hint = "Read the stderr tail, fix the command, and run it again."
+    m = re.search(r"ModuleNotFoundError: No module named '([^']+)'", tail)
+    if m:
+        hint = (
+            f"The command ran {exe}, which can't import {m.group(1)}. Pass the interpreter that has your training "
+            "dependencies, for example `.venv/bin/python train.py` or the output of `which python` in your training environment."
+        )
+    elif run.get("timed_out"):
+        hint = "The run hit the timeout before the window closed. Raise --timeout, or lower --steps and --seconds."
+    return {"exit_code": run.get("exit_code"), "executable": exe, "stderr_tail": tail, "hint": hint}
+
+
 def summarize(run_dir: Path) -> dict:
     run_dir = Path(run_dir)
     run = json.loads((run_dir / "run.json").read_text())
@@ -379,7 +401,19 @@ def summarize(run_dir: Path) -> dict:
     ev["py_spy"] = pyspy_summary(run_dir)
     ev["run"] = {
         k: run.get(k)
-        for k in ("cmd", "cwd", "started_at", "wall_s", "exit_code", "timed_out", "env_set", "provenance", "label", "load_avg_1m")
+        for k in (
+            "cmd",
+            "cwd",
+            "executable",
+            "started_at",
+            "wall_s",
+            "exit_code",
+            "timed_out",
+            "env_set",
+            "provenance",
+            "label",
+            "load_avg_1m",
+        )
     }
     first = (ev.get("config") or {}).get("first_step_wall")
     if first and run.get("start_wall"):
@@ -390,6 +424,8 @@ def summarize(run_dir: Path) -> dict:
         limits.append(f"The run hit the {run['config'].get('timeout')} s timeout and was stopped.")
     if run.get("exit_code") not in (0, None) and ev.get("steps", {}).get("end_reason") != "window_complete":
         limits.append(f"The command exited with code {run.get('exit_code')} before the window closed; see stderr.log.")
+        if not ev.get("steps", {}).get("measured"):
+            ev["failure"] = failure_summary(run_dir, run)
     st = ev.get("steps", {})
     if ev.get("source") == "hook" and st.get("end_reason") not in ("window_complete", None):
         limits.append(

@@ -170,4 +170,9 @@ def run_setup(apply: bool = False, project: str | None = None, server_command: s
         except Exception as e:
             print(f"  {a.target}: FAILED: {e}")
             rc = 1
+    if rc == 0:
+        print(
+            "Done. Start a new agent session in your training project and ask, for example:\n"
+            '  "train.py is slow. Use train-doctor to find out why, fix it, and prove the speedup."'
+        )
     return rc

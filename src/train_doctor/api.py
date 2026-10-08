@@ -19,7 +19,7 @@ from train_doctor.evidence import write_evidence
 from train_doctor.machine import command_provenance, machine_info
 from train_doctor.redact import dump_json
 from train_doctor.rules import diagnose as run_rules
-from train_doctor.runner import CommandError, RunConfig, run
+from train_doctor.runner import CommandError, RunConfig, not_found_hint, resolve_executable, run
 from train_doctor.stats import bootstrap_ratio_ci, describe, mann_whitney_u, verdict
 
 DEFAULT_OUT = ".train-doctor/runs"
@@ -118,7 +118,32 @@ def profile(
     findings = [f.to_dict() for f in run_rules(ev)]
     dump_json(run_dir / "findings.json", findings)
     report.write(run_dir)
-    return {"run_dir": str(run_dir), "evidence": ev, "findings": findings}
+    out = {"run_dir": str(run_dir), "evidence": ev, "findings": findings, "next_step": profile_next_step(argv, ev, findings)}
+    if ev.get("failure"):
+        out["error"] = ev["failure"]
+    return out
+
+
+def profile_next_step(argv: list[str], ev: dict, findings: list[dict]) -> str:
+    """One sentence that tells a person or an agent what to do after a profile."""
+    if ev.get("failure"):
+        return "The command failed before the first step: " + ev["failure"]["hint"]
+    if ev.get("source") == "none":
+        return (
+            "No training steps were seen. Make sure the loop calls optimizer.step(), or add "
+            "train_doctor.step(samples=..., loss=...) at the end of each step, or print a line containing 'loss' each step."
+        )
+    safe = [f for f in findings if f["risk"] != "high"]
+    if not safe:
+        return "No rule fired: the loop has no obvious waste the rules can see. Further gains need model or algorithm changes."
+    top = safe[0]
+    cmd = shlex.join(argv)
+    change = top["suggestion"].split(". ")[0].rstrip(".")
+    return (
+        f"Make one change for [{top['id']}]: {change[:1].lower()}{change[1:]}. Do it behind a flag or in a copy so the "
+        f"original still runs, then measure it with compare (CLI: train-doctor compare --baseline {shlex.quote(cmd)} "
+        f'--candidate "<changed command>" --label {top["id"]}). Keep it only if the decision is keep.'
+    )
 
 
 def diagnose(run_dir: str | Path | None = None, out_dir: str | Path = DEFAULT_OUT) -> dict:
@@ -140,8 +165,14 @@ def _usable(ev: dict) -> str | None:
     """None if a run's throughput can be used, else the reason it can't."""
     if not (ev.get("throughput") or {}).get("steps_per_s"):
         return "no throughput"
-    if ev.get("source") == "hook" and (ev.get("steps") or {}).get("end_reason") != "window_complete":
-        return f"the measurement window did not complete ({(ev.get('steps') or {}).get('end_reason')})"
+    st = ev.get("steps") or {}
+    if ev.get("source") == "hook" and st.get("end_reason") != "window_complete":
+        if st.get("end_reason") == "process_exit" and (ev.get("run") or {}).get("exit_code") == 0:
+            return (
+                f"the script finished on its own after {st.get('total')} steps, before the measurement window closed; "
+                "let it run more steps (for example a larger max-steps or epochs setting, the same in both commands) or lower steps/seconds"
+            )
+        return f"the measurement window did not complete ({st.get('end_reason')})"
     return None
 
 
@@ -196,10 +227,9 @@ def compare(
         schedule += [("measure", pair[0], i), ("measure", pair[1], i)]
 
     for arm, argv in arms.items():
-        if not argv or (shutil.which(argv[0]) is None and not Path(cwd, argv[0]).exists()):
+        if not argv or resolve_executable(argv, cwd) is None:
             shutil.rmtree(root, ignore_errors=True)
-            hint = " (in zsh, an unquoted $VAR is not split into words)" if argv and " " in argv[0] else ""
-            raise CommandError(f"{arm} command not found: {argv[:1]!r}{hint}")
+            raise CommandError(f"{arm} command not found: {argv[:1]!r}.{not_found_hint(argv)}")
     runs: list[dict] = []
     for order, (phase, arm, idx) in enumerate(schedule):
         sub = root / ("warmup" if phase == "warmup" else arm) / (f"{arm}-{idx}" if phase == "warmup" else f"rep-{idx}")
@@ -264,6 +294,9 @@ def compare(
         result["verdict"] = "error"
         result["decision"] = "inconclusive"
         result["reason"] = "fewer than 2 successful repeats in an arm"
+        result["next_step"] = (
+            "Most repeats failed. Read the errors and the stderr.log files they point to, fix the command, and compare again."
+        )
         _write_compare(root, result)
         return result
 
@@ -305,6 +338,15 @@ def compare(
         result["limits"].append(
             f"Run-to-run spread is high (coefficient of variation up to {spread:.0%}); close other apps or raise --repeats."
         )
+    loads = [r["evidence"]["run"].get("load_avg_1m") for r in measured]
+    loads = [x for x in loads if x is not None]
+    cores = machine.get("cores_logical")
+    busy = bool(loads and cores and max(loads) > cores)
+    if busy:
+        result["limits"].append(
+            f"The machine was busy: the 1-minute load average reached {max(loads):.1f} on {cores} logical cores during the runs, "
+            "so other processes competed for CPU. Expect wide intervals; rerun when the machine is quieter for a firmer answer."
+        )
     ttfs = {arm: [r["evidence"]["run"].get("time_to_first_step_s") for r in ok[arm]] for arm in arms}
     if all(all(x is not None for x in v) and v for v in ttfs.values()):
         from train_doctor.stats import median
@@ -315,12 +357,56 @@ def compare(
             result["limits"].append(
                 f"The candidate takes {extra:.1f} s longer to reach its first step (median). That one-time cost is outside the throughput window; weigh it against the run length."
             )
+        stalled = [
+            f"{arm} repeat {r['index']}"
+            for arm in arms
+            for r in ok[arm]
+            if r["evidence"]["run"]["time_to_first_step_s"] > max(3 * result["time_to_first_step_s"][arm], 5.0)
+        ]
+        if stalled:
+            busy = True
+            result["limits"].append(
+                f"{', '.join(stalled)} took over 3 times the usual time to reach the first step, a sign the machine was stalled "
+                "by other work; their throughput is likely low for the same reason. Rerun when the machine is quieter."
+            )
     if machine.get("gpu_backend") == "apple":
         result["limits"].append(
             "Apple laptops change clock speeds with temperature and power state; interleaving reduces but doesn't remove that drift."
         )
+    result["next_step"] = compare_next_step(decision, v, loss["status"], len(b), busy)
     _write_compare(root, result)
     return result
+
+
+def compare_next_step(decision: str, verdict_: str, loss_status: str, n: int, busy: bool = False) -> str:
+    if decision == "keep":
+        return "Keep the change. Use the candidate as the new baseline and profile it again: the bottleneck usually moves."
+    if decision == "reject" and verdict_ == "slower":
+        return "Revert the change: the candidate is slower."
+    if decision == "reject":
+        return (
+            "Revert the change, or keep it only if you accept different training: the loss trajectory moved beyond the "
+            "tolerance. Say so if you report it."
+        )
+    if verdict_ == "faster" and loss_status == "unavailable":
+        return (
+            "Speed looks better but training equivalence is unchecked. Make the script report its loss (print a line "
+            "containing 'loss', or train_doctor.step(loss=...)) and compare again."
+        )
+    if busy:
+        return (
+            "No clear difference, and other work on the machine disturbed the runs (see limits). More repeats rarely fix "
+            "that: rerun this compare when the machine is quieter, or drop the change. Don't report it as faster."
+        )
+    if n >= 9:
+        return (
+            f"No clear difference with {n} repeats per arm. Drop the change, or accept that any gain is smaller than "
+            "this machine's run-to-run noise. Don't report it as faster."
+        )
+    return (
+        "No clear difference. Either drop the change, or compare again with repeats=9 (and seconds=4) "
+        "if you expect a small but real gain. Don't report it as faster."
+    )
 
 
 def _write_compare(root: Path, result: dict) -> None:

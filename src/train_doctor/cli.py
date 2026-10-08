@@ -80,8 +80,21 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _print_failure(err: dict) -> None:
+    print(f"error: the command exited with code {err.get('exit_code')} before its first measured step (ran {err.get('executable')})")
+    if err.get("stderr_tail"):
+        print("stderr (last lines):")
+        for line in err["stderr_tail"].splitlines():
+            print(f"  | {line}")
+    print(f"fix: {err.get('hint')}")
+
+
 def _print_profile(res: dict) -> None:
     ev = res["evidence"]
+    if res.get("error"):
+        print(f"run: {res['run_dir']}")
+        _print_failure(res["error"])
+        return
     tp = ev.get("throughput") or {}
     stm = ev.get("step_time_ms") or {}
     print(f"run: {res['run_dir']}")
@@ -103,6 +116,7 @@ def _print_profile(res: dict) -> None:
     for lim in ev.get("limits") or []:
         print(f"limit: {lim}")
     print(f"report: {Path(res['run_dir']) / 'report.md'}")
+    print(f"next: {res['next_step']}")
 
 
 def _print_findings(findings: list[dict]) -> None:
@@ -114,6 +128,7 @@ def _print_findings(findings: list[dict]) -> None:
         print(f"  {i}. [{f['id']}] {f['title']} (score {f['score']:.3f}, risk {f['risk']})")
         print(f"     evidence: {f['evidence']}")
         print(f"     change: {f['suggestion']}")
+        print(f"     expected: {f['expected_effect']}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -157,6 +172,8 @@ def _dispatch(args: argparse.Namespace) -> int:
                 json.dumps(
                     {
                         "run_dir": res["run_dir"],
+                        "error": res.get("error"),
+                        "next_step": res["next_step"],
                         "throughput": ev.get("throughput"),
                         "step_time_ms": ev.get("step_time_ms"),
                         "split": ev.get("split"),
@@ -169,7 +186,7 @@ def _dispatch(args: argparse.Namespace) -> int:
             )
         else:
             _print_profile(res)
-        return 0
+        return 1 if res.get("error") else 0
 
     if args.command == "diagnose":
         res = api.diagnose(args.run_dir, args.out)
@@ -223,6 +240,8 @@ def _dispatch(args: argparse.Namespace) -> int:
             for lim in res.get("limits") or []:
                 print(f"limit: {lim}")
             print(f"report: {Path(res['root']) / 'report.md'}")
+            if res.get("next_step"):
+                print(f"next: {res['next_step']}")
         return 0 if res.get("verdict") != "error" else 1
 
     if args.command == "report":

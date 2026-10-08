@@ -9,12 +9,14 @@ stdout and stderr are saved verbatim.
 from __future__ import annotations
 
 import datetime as _dt
+import importlib.util
 import json
 import os
 import re
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import asdict, dataclass, field
@@ -144,8 +146,56 @@ def _reader(stream, path: Path, loss_path: Path | None, echo: bool, tag: str) ->
     stream.close()
 
 
+# Files that mark an installed tool environment: `uv tool install` and pipx.
+_TOOL_ENV_MARKERS = ("uv-receipt.toml", "pipx_metadata.json")
+
+
+def _is_tool_env(prefix: Path) -> bool:
+    # uvx builds a throwaway env inside the uv cache, under an "archive-v<N>" directory.
+    return prefix.parent.name.startswith("archive-v") or any((prefix / m).exists() for m in _TOOL_ENV_MARKERS)
+
+
+def tool_env_bin() -> str | None:
+    """The bin directory of train-doctor's own tool environment, if it runs from one.
+
+    ``uvx train-doctor`` puts that directory first on PATH, so a bare ``python`` in
+    the user's command would start the tool's interpreter (no torch) instead of the
+    user's. Returns None when train-doctor runs from the user's own environment, or
+    when its environment has torch (``uvx --with torch train-doctor ...``).
+    """
+    prefix = Path(sys.prefix)
+    if sys.prefix == sys.base_prefix or not _is_tool_env(prefix):
+        return None
+    if str(prefix) in {os.environ.get("VIRTUAL_ENV"), os.environ.get("CONDA_PREFIX")}:
+        return None
+    if importlib.util.find_spec("torch") is not None:
+        return None
+    return str(prefix / ("Scripts" if os.name == "nt" else "bin"))
+
+
+def child_path(path: str | None = None) -> str:
+    """PATH for the training command: the caller's PATH without train-doctor's tool env."""
+    path = os.environ.get("PATH", "") if path is None else path
+    own = tool_env_bin()
+    if not own:
+        return path
+    own_real = os.path.realpath(own)
+    return os.pathsep.join(d for d in path.split(os.pathsep) if d and os.path.realpath(d) != own_real)
+
+
+def resolve_executable(cmd: list[str], cwd: str = ".") -> str | None:
+    """Absolute path of the program the command will start, using the child's PATH."""
+    if not cmd:
+        return None
+    if os.sep in cmd[0]:
+        p = Path(cwd, cmd[0])
+        return str(p.resolve()) if p.exists() else None
+    return shutil.which(cmd[0], path=child_path())
+
+
 def build_env(cfg: RunConfig, run_dir: Path) -> dict:
     env = dict(os.environ)
+    env["PATH"] = child_path(env.get("PATH", ""))
     env.update({k: str(v) for k, v in cfg.env.items()})
     env["PYTHONUNBUFFERED"] = "1"
     if cfg.hook:
@@ -160,6 +210,14 @@ def build_env(cfg: RunConfig, run_dir: Path) -> dict:
         if cfg.seed is not None:
             env["TRAIN_DOCTOR_SEED"] = str(cfg.seed)
     return env
+
+
+def not_found_hint(cmd: list[str]) -> str:
+    if len(cmd) == 1 and " " in cmd[0]:
+        return " The whole command arrived as one argument; pass it as separate words (in zsh, an unquoted $VAR is not split)."
+    if cmd and cmd[0] == "python":
+        return " There is no `python` on PATH. Use `python3`, or the full path of the interpreter that has your training dependencies (for example .venv/bin/python)."
+    return ""
 
 
 def _kill_tree(proc: subprocess.Popen, grace: float = 10.0) -> None:
@@ -198,10 +256,7 @@ def run(cfg: RunConfig, run_dir: Path) -> dict:
             start_new_session=True,
         )
     except OSError as e:
-        hint = ""
-        if len(cfg.cmd) == 1 and " " in cfg.cmd[0]:
-            hint = " The whole command arrived as one argument; pass it as separate words (in zsh, an unquoted $VAR is not split)."
-        raise CommandError(f"could not start {cfg.cmd!r}: {e.strerror or e}.{hint}") from e
+        raise CommandError(f"could not start {cfg.cmd!r}: {e.strerror or e}.{not_found_hint(cfg.cmd)}") from e
     readers = [
         threading.Thread(
             target=_reader, args=(proc.stdout, run_dir / "stdout.log", run_dir / "log_losses.jsonl", cfg.echo, "out"), daemon=True
@@ -243,6 +298,7 @@ def run(cfg: RunConfig, run_dir: Path) -> dict:
         "config": {k: v for k, v in asdict(cfg).items() if k not in ("cmd", "env")},
         "env_set": {k: v for k, v in env.items() if k.startswith("TRAIN_DOCTOR_")},
         "hook_dir": str(HOOK_DIR) if cfg.hook else None,
+        "executable": resolve_executable(cfg.cmd, cfg.cwd),
         "py_spy": spy_info,
     }
     dump_json(run_dir / "run.json", meta)
