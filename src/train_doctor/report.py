@@ -311,6 +311,7 @@ def render_compare(r: dict) -> str:
     L.append("")
     return "\n".join(L)
 
+
 def _fmt_p(p: float | None) -> str:
     """Format a p-value for prose: "= 0.0312", "< 0.0001", or "n/a"."""
     if p is None or p != p:
