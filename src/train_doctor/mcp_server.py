@@ -4,11 +4,19 @@ Works with the official ``mcp`` Python SDK, both 1.x (FastMCP) and 2.x
 (MCPServer).
 """
 
-from __future__ import annotations
-
+import functools
 from pathlib import Path
 
+import anyio
+import anyio.from_thread
+import anyio.to_thread
+
 from train_doctor import __version__, api
+
+try:  # mcp 2.x
+    from mcp.server.mcpserver import Context
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import Context
 
 INSTRUCTIONS = (
     "train-doctor measures why a PyTorch (or any) training command is slow and proves speedups. "
@@ -24,6 +32,10 @@ _COMMAND_DOC = (
     "shell-style string. It runs in `cwd` with the caller's PATH; if `python` is not the interpreter that "
     "has torch, pass its full path."
 )
+
+
+# No `from __future__ import annotations` here: the SDK finds the Context parameter by its
+# annotation, and some 1.x releases can't resolve string annotations.
 
 
 def _server_class():
@@ -121,9 +133,10 @@ def build_server():
         return api.diagnose(run_dir or None, _abs(out_dir, cwd))
 
     @server.tool()
-    def compare(
+    async def compare(
         baseline: list[str] | str,
         candidate: list[str] | str,
+        ctx: Context,
         cwd: str = ".",
         repeats: int = 5,
         warmup_runs: int = 1,
@@ -141,27 +154,41 @@ def build_server():
 
         baseline is the original command and candidate the changed one (argv lists or strings, same
         format as profile's `command`). Change exactly one thing between them. Runs warmup_runs discarded
-        runs per command, then `repeats` measured runs each in randomized pair order with the same seed,
-        and returns median throughput per arm, the candidate/baseline ratio with a 95% bootstrap interval,
-        a verdict (faster, slower, no clear difference), a loss-trajectory check, a decision (keep, reject,
+        runs per command, then `repeats` pairs: baseline and candidate back to back, order alternating,
+        same seed. Each pair gives a candidate/baseline throughput ratio. Returns the median pair ratio
+        with a 95% bootstrap interval, how many pairs the candidate won, stalled pairs it set aside (a
+        run far slower than the other runs of the same command, from other work on the machine), a
+        verdict (faster, slower, no clear difference), a loss-trajectory check, a decision (keep, reject,
         inconclusive), the reason, and `next_step`. Keep a change only when decision is 'keep'. Takes
-        about (repeats + warmup_runs) x 2 runs of a few seconds each.
+        about (repeats + warmup_runs) x 2 runs of a few seconds each and sends a progress notification
+        after every run.
         """
-        res = api.compare(
-            baseline,
-            candidate,
-            cwd=cwd,
-            repeats=repeats,
-            warmup_runs=warmup_runs,
-            warmup_steps=warmup_steps,
-            steps=steps,
-            seconds=seconds,
-            seed=seed,
-            loss_tol=loss_tol,
-            min_effect=min_effect,
-            timeout=timeout,
-            out_dir=_abs(out_dir, cwd),
-            label=label or None,
+
+        def progress(done: int, total: int, message: str) -> None:
+            try:
+                anyio.from_thread.run(functools.partial(ctx.report_progress, done, total, message))
+            except Exception:  # no client session (direct call) or the client went away
+                pass
+
+        res = await anyio.to_thread.run_sync(
+            functools.partial(
+                api.compare,
+                baseline,
+                candidate,
+                cwd=cwd,
+                repeats=repeats,
+                warmup_runs=warmup_runs,
+                warmup_steps=warmup_steps,
+                steps=steps,
+                seconds=seconds,
+                seed=seed,
+                loss_tol=loss_tol,
+                min_effect=min_effect,
+                timeout=timeout,
+                out_dir=_abs(out_dir, cwd),
+                label=label or None,
+                progress=progress,
+            )
         )
         head = {k: res[k] for k in ("decision", "reason", "next_step") if k in res}
         res = head | {k: v for k, v in res.items() if k != "machine" and k not in head}

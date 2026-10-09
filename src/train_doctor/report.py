@@ -250,7 +250,31 @@ def render_compare(r: dict) -> str:
         if tt:
             L.append(f"| Process start to first step (median) | {tt['baseline']:.2f} s | {tt['candidate']:.2f} s |")
     L.append("")
-    if r.get("ratio"):
+    if r.get("ratio") and r.get("pairs"):
+        ra = r["ratio"]
+        w = r.get("wins") or {}
+        wx = r.get("wilcoxon") or {}
+        L.append(
+            f"Speed ratio (candidate / baseline {unit}, median over {ra.get('n_pairs')} back-to-back pairs): **{ra['point']:.3f}x**, "
+            f"95% interval {ra['low']:.3f} to {ra['high']:.3f}. Candidate faster in {w.get('candidate_faster')} of {w.get('pairs')} pairs. "
+            f"Verdict: **{r.get('verdict')}** (threshold: interval must clear 1 +/- {s.get('min_effect', 0):.0%}). "
+            f"Wilcoxon signed-rank on the log pair ratios: two-sided p {_fmt_p(wx.get('p_two_sided'))} "
+            f"(the smallest possible with {wx.get('n')} pairs is {_fmt(wx.get('p_min'), 4)}).\n"
+        )
+        al = r.get("ratio_all_pairs")
+        if al:
+            L.append(
+                f"With the stalled pairs included, the median pair ratio would be {al['point']:.3f}x and the interval {al['low']:.3f} to {al['high']:.3f}.\n"
+            )
+        L.append("## Pairs\n")
+        L.append(f"| Pair | Baseline {unit} | Candidate {unit} | Ratio | Stall |\n|---:|---:|---:|---:|---|")
+        for pr in r["pairs"]:
+            stall = ", ".join(pr.get("stalled") or []) or ""
+            if stall:
+                stall += " run stalled, " + ("set aside" if pr.get("excluded") else "kept (too many stalls to set aside)")
+            L.append(f"| {pr['pair']} | {_fmt(pr['baseline'], 2)} | {_fmt(pr['candidate'], 2)} | {pr['ratio']:.3f} | {stall} |")
+        L.append("")
+    elif r.get("ratio"):  # compare.json written by 0.1.1 or earlier: unpaired ratio of medians
         ra = r["ratio"]
         mw = r.get("mann_whitney") or {}
         L.append(
@@ -299,7 +323,7 @@ def render_compare(r: dict) -> str:
         L.append("")
     L.append("## Settings\n")
     L.append(
-        f"{s.get('repeats')} repeats per arm in randomized pair order (order seed {s.get('order_seed')}), {s.get('warmup_runs')} discarded warmup run(s) per arm, {s.get('warmup_steps')} warmup steps and {s.get('steps') if not s.get('seconds') else str(s.get('seconds')) + ' s'} measured {'steps' if not s.get('seconds') else ''} per run, seed {s.get('seed')} (set before the script's own seeding). Interval: {s.get('interval')}.\n"
+        f"{s.get('repeats')} repeats per arm, {s.get('design') or 'randomized pair order'} (order seed {s.get('order_seed')}), {s.get('warmup_runs')} discarded warmup run(s) per arm, {s.get('warmup_steps')} warmup steps and {s.get('steps') if not s.get('seconds') else str(s.get('seconds')) + ' s'} measured {'steps' if not s.get('seconds') else ''} per run, seed {s.get('seed')} (set before the script's own seeding). Interval: {s.get('interval')}.\n"
     )
     L.append("## Machine\n")
     L.append(

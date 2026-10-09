@@ -88,3 +88,50 @@ def test_compare_names_busy_machine_and_stalled_repeats(tmp_path, monkeypatch):
     assert "load average reached 9.5 on 4 logical cores" in limits
     assert "took over 3 times the usual time to reach the first step" in limits
     assert "when the machine is quieter" in res["next_step"]
+
+
+def test_compare_pairs_runs_sets_aside_a_stall_and_reports_progress(tmp_path, monkeypatch):
+    order = []
+
+    def fake_run(cfg, run_dir, machine, kind, label=None):
+        arm = "candidate" if cfg.cmd[-1] == "1" else "baseline"
+        order.append((run_dir.parent.name, run_dir.name))
+        n = sum(1 for o in order if o[0] == arm)  # measured runs so far in this arm
+        value = 130.0 if arm == "candidate" else 100.0
+        if arm == "candidate" and n == 3:
+            value = 3.0  # pair 2's candidate run hit a 40x stall
+        return {
+            "source": "hook",
+            "steps": {"end_reason": "window_complete"},
+            "throughput": {"samples_per_s": value + n * 0.1, "steps_per_s": 10.0},
+            "loss": [],
+            "run": {"exit_code": 0, "load_avg_1m": 1.0, "time_to_first_step_s": 2.0},
+        }
+
+    monkeypatch.setattr(api, "_single_run", fake_run)
+    monkeypatch.setattr(api, "machine_info", lambda: {"cores_logical": 8, "gpu_backend": "none"})
+    seen = []
+    res = api.compare(
+        [sys.executable, "-c", "0"],
+        [sys.executable, "-c", "1"],
+        repeats=5,
+        warmup_runs=1,
+        out_dir=tmp_path / "runs",
+        progress=lambda done, total, msg: seen.append((done, total, msg)),
+    )
+    # warmup pair, then 5 measured pairs; the order inside a pair alternates
+    measured = [r for r in res["runs"] if r["phase"] == "measure"]
+    firsts = [measured[2 * i]["arm"] for i in range(5)]
+    assert all(firsts[i] != firsts[i + 1] for i in range(4))
+    assert all(measured[2 * i]["index"] == measured[2 * i + 1]["index"] == i for i in range(5))
+    assert [p["pair"] for p in res["pairs"]] == [0, 1, 2, 3, 4]
+    assert res["stalls"]["set_aside"] == [2] and res["pairs"][2]["stalled"] == ["candidate"]
+    assert res["verdict"] == "faster" and res["ratio"]["n_pairs"] == 4
+    assert res["ratio_all_pairs"]["low"] < 0.1
+    limits = " ".join(res["limits"])
+    assert "Set aside 1 stalled pair(s) out of 5: candidate repeat 2 ran at 3.3 samples/s" in limits
+    assert "A set-aside stall was in a candidate run" in limits
+    assert [s[:2] for s in seen] == [(i, 12) for i in range(1, 13)]
+    assert seen[-1][2].endswith("done") and "pair 5 of 5" in seen[-1][2]
+    report = (tmp_path / "runs" / next((tmp_path / "runs").iterdir()).name / "report.md").read_text()
+    assert "## Pairs" in report and "candidate run stalled, set aside" in report

@@ -55,7 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=api.DEFAULT_OUT)
     p.add_argument("--json", action="store_true")
 
-    p = sub.add_parser("compare", help="benchmark a baseline and a candidate command with repeats and a verdict")
+    p = sub.add_parser(
+        "compare",
+        help="benchmark a baseline and a candidate command in back-to-back pairs and give a verdict",
+        description=(
+            "Run the baseline and candidate commands as back-to-back pairs (order alternating), compare throughput pair by pair, "
+            "set aside pairs where the machine stalled, and decide keep, reject or inconclusive. Progress goes to stderr."
+        ),
+    )
     p.add_argument("--baseline", required=True, help="baseline command, quoted")
     p.add_argument("--candidate", required=True, help="candidate command, quoted")
     p.add_argument("--repeats", type=int, default=5, help="measured runs per command (default 5)")
@@ -63,7 +70,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0, help="seed set in both commands before their own seeding (default 0)")
     p.add_argument("--loss-tol", type=float, default=0.05, help="allowed relative loss difference, mean and final (default 0.05)")
     p.add_argument("--min-effect", type=float, default=0.02, help="smallest speed change worth calling, as a fraction (default 0.02)")
-    p.add_argument("--order-seed", type=int, default=0, help="seed for the randomized run order (default 0)")
+    p.add_argument(
+        "--order-seed", type=int, default=0, help="picks which command runs first in the first pair; the order then alternates (default 0)"
+    )
+    p.add_argument("--quiet", action="store_true", help="don't print a progress line to stderr after each run")
     _add_window(p)
 
     p = sub.add_parser("report", help="write report.md and report.json for a run directory")
@@ -217,7 +227,7 @@ def _dispatch(args: argparse.Namespace) -> int:
             out_dir=args.out,
             echo=args.echo,
             label=args.label,
-            progress=None if args.json else (lambda msg: print(msg, file=sys.stderr)),
+            progress=None if args.quiet else (lambda done, total, msg: print(msg, file=sys.stderr, flush=True)),
         )
         if args.json:
             print(json.dumps({k: v for k, v in res.items() if k != "machine"}, indent=2, default=str))
@@ -228,7 +238,18 @@ def _dispatch(args: argparse.Namespace) -> int:
                 tp = res["throughput"]
                 unit = "samples/s" if res["metric"] == "samples_per_s" else "steps/s"
                 print(f"baseline median {tp['baseline']['median']:.2f} {unit}, candidate median {tp['candidate']['median']:.2f} {unit}")
-                print(f"ratio {ra['point']:.3f}x (95% interval {ra['low']:.3f} to {ra['high']:.3f}), verdict: {res['verdict']}")
+                w = res["wins"]
+                print(
+                    f"median pair ratio {ra['point']:.3f}x (95% interval {ra['low']:.3f} to {ra['high']:.3f}), "
+                    f"candidate faster in {w['candidate_faster']} of {w['pairs']} pairs, verdict: {res['verdict']}"
+                )
+                st = res.get("stalls") or {}
+                if st.get("set_aside"):
+                    al = res["ratio_all_pairs"]
+                    print(
+                        f"stalled pairs set aside: {', '.join(str(i) for i in st['set_aside'])} "
+                        f"(with them the interval would be {al['low']:.3f} to {al['high']:.3f})"
+                    )
             lc = res.get("loss_check") or {}
             if lc:
                 print(
