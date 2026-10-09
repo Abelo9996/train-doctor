@@ -8,7 +8,7 @@ train-doctor is a deterministic measuring tool. It never calls an LLM API; the h
 - `runner.py`: starts the command with the hook on PYTHONPATH, samples CPU/memory/GPU, saves stdout and stderr, enforces the timeout.
 - `evidence.py`: raw files to one evidence dict (step stats, throughput, time split, config, resources, profiler, py-spy, loss, limits).
 - `rules.py`: evidence to ranked findings. Pure functions.
-- `stats.py`, `lossdiff.py`: medians, bootstrap interval, Mann-Whitney, verdict, loss trajectory check.
+- `stats.py`, `lossdiff.py`: medians, the paired analysis behind compare (stall detection, bootstrap interval of the median pair ratio, Wilcoxon signed-rank), verdict, loss trajectory check.
 - `api.py`: `profile`, `diagnose`, `compare`, `make_report`. The CLI (`cli.py`) and MCP server (`mcp_server.py`) are thin wrappers.
 - `report.py`: Markdown and JSON.
 - `setup_agents.py`: `train-doctor setup`.
@@ -17,5 +17,5 @@ train-doctor is a deterministic measuring tool. It never calls an LLM API; the h
 ## Rules
 
 - Tests are offline and use a temporary HOME (see `tests/conftest.py`). Never run `setup --yes` against a real home directory while developing.
-- Keep measurement honest: warmup excluded, window bracketed by device sync, repeats interleaved, and no verdict of "faster" unless the whole interval clears the threshold.
+- Keep measurement honest: warmup excluded, window bracketed by device sync, baseline and candidate run as back-to-back pairs, stalls set aside only under the stated cap and always reported, and no verdict of "faster" unless the whole interval clears the threshold.
 - No em or en dashes in any text.

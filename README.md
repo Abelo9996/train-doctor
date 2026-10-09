@@ -43,23 +43,51 @@ findings:
   4. [no_mixed_precision] ...  5. [logging_in_hot_loop] ...  6. [no_torch_compile] ...
 ```
 
-Then one change at a time, each checked with `train-doctor compare` (5 measured repeats per side after one
-discarded warmup run, randomized order, 95% bootstrap interval on the ratio of median samples/s):
+Then one change at a time, each checked with `train-doctor compare` (one discarded warmup run per side,
+then 5 pairs of baseline and candidate run back to back). These runs were made with 0.1.1, which compared
+the two sides' medians as independent samples; the last column is the same runs analyzed pair by pair the
+way 0.1.2 does it ([examples/reanalyze_paired.py](examples/reanalyze_paired.py)):
 
-| Change | Median samples/s, before to after | Ratio (95% interval) | Loss check | Decision |
+| Change | Median samples/s, before to after | Loss check | 0.1.1: ratio of medians (95% interval), decision | 0.1.2: median pair ratio (95% interval), pairs won |
 |---|---|---|---|---|
-| `num_workers=5` | 2,249 to 2,750 | 1.22x (0.66 to 1.68) | within tolerance | inconclusive, dropped |
-| crop/flip/normalize per batch on the device | 2,232 to 2,855 | 1.28x (1.10 to 1.35) | within tolerance | keep |
-| read metrics every 50 steps instead of every step | 2,420 to 3,029 | 1.25x (1.11 to 1.35) | identical | keep |
-| autocast float16 | 2,648 to 2,842 | 1.07x (0.81 to 1.28) | within tolerance | inconclusive, dropped |
-| original vs the two kept changes | 2,091 to 3,381 | 1.62x (1.37 to 3.48) | within tolerance | keep |
+| `num_workers=5` | 2,249 to 2,750 | within tolerance | 1.22x (0.66 to 1.68), inconclusive | 1.09x (0.76 to 1.41), 3 of 5, inconclusive |
+| crop/flip/normalize per batch on the device | 2,232 to 2,855 | within tolerance | 1.28x (1.10 to 1.35), keep | 1.23x (1.07 to 1.37), 5 of 5, keep |
+| read metrics every 50 steps instead of every step | 2,420 to 3,029 | identical | 1.25x (1.11 to 1.35), keep | 1.25x (1.00 to 1.37), 5 of 5, inconclusive |
+| autocast float16 | 2,648 to 2,842 | within tolerance | 1.07x (0.81 to 1.28), inconclusive | 1.07x (0.90 to 1.15), 4 of 5, inconclusive |
+| original vs the two kept changes | 2,091 to 3,381 | within tolerance | 1.62x (1.37 to 3.48), keep | 1.69x (1.26 to 1.81), 4 of 4 after setting aside 1 stalled pair, keep |
 
 Two of the four candidates looked faster by their medians and were still not kept, because their intervals
-included 1.0. In the second example ([examples/tabular_mlp](examples/tabular_mlp)), checkpointing less often
-was inconclusive with 5 repeats (1.54x, interval 0.62 to 2.67) and clearly faster with 9 (2.01x, 1.54 to 2.52);
-original vs final there is 3.05x (2.15 to 3.40) with an identical loss trajectory. Every report, per-repeat
-number and raw trace is committed under `examples/*/runs/`, and
+included 1.0. The paired analysis is stricter about ordinary noise: "read metrics every 50 steps" won all 5
+pairs, but one pair by only 1.00x, and with 5 pairs `faster` needs every pair to clear the 2% threshold. In
+the second example ([examples/tabular_mlp](examples/tabular_mlp)), checkpointing less often was inconclusive
+under 0.1.1 with 5 repeats (1.54x, interval 0.62 to 2.67) because one candidate run was 2.5 times slower than
+that side's median; the paired analysis sets that pair aside and says faster (1.96x, 1.36 to 2.51), which matches
+the 9-repeat rerun (0.1.1: 2.01x, 1.54 to 2.52; paired: 2.18x, 1.54 to 2.44, 9 of 9 pairs). Original vs
+final there is 3.05x (2.15 to 3.40) under 0.1.1 and 2.80x (2.15 to 3.33) paired, with an identical loss
+trajectory. Every report, per-repeat number and raw trace is committed under `examples/*/runs/`, and
 [examples/run_validation.sh](examples/run_validation.sh) is the exact command sequence.
+
+### One stalled run
+
+A laptop that hiccups (another job, swapping, a sleep) can make one run 30 to 100 times slower. To test
+that, [examples/stall_once.py](examples/stall_once.py) froze one candidate run for 60 s inside its measured
+window, in a compare of the tabular example's original vs final commands (5 pairs, Apple M4, load average
+4.0 to 7.2 at run starts; numbers are rough on a shared machine):
+
+```text
+$ train-doctor compare --baseline "$W ... -- $MLP" --candidate "$W ... --on-run 4 --sleep 60 -- $MLP --ckpt-every 200 --num-workers 5"
+[8/12] pair 3 of 5, candidate: 211.3 samples/s in 94.5 s, about 111 s left
+...
+decision: keep: candidate is faster (2.67x, 95% interval 2.28 to 3.66, won 4 of 4 pairs) and the loss trajectory is identical
+stalled pairs set aside: 2 (with them the interval would be 0.022 to 3.656)
+limit: Set aside 1 stalled pair(s) out of 5: candidate repeat 2 ran at 211.3 samples/s, 158.5 times slower than that arm's median 3.35e+04. ...
+```
+
+0.1.1's unpaired analysis of the same runs gives 0.02 to 3.66 and "no clear difference". With a stall in
+a baseline run of a loop whose speedup is known (2x by construction), 0.1.1 still said faster but with an
+interval of 1.31 to 97.46; paired it is 1.79x (1.30 to 1.94). All stall runs, including five on a heavily
+loaded machine where other slow pairs kept the answer inconclusive, are in
+[examples/README.md](examples/README.md#one-stalled-run-012).
 
 ## Use it with your agent
 
@@ -92,6 +120,8 @@ compare(..., repeats=17, seconds=4)
 agent: The 1.16x is the confirmed figure, and 1.05x is the most I'd promise.
 ```
 
+The 0.11 to 22.99 interval in the first compare is what one stalled run did to 0.1.1's unpaired
+analysis; 0.1.2 pairs the runs and sets stalls aside (see "One stalled run" below).
 It also tried logging every 50 steps and float16 autocast on top, got "no clear difference" for both, and
 dropped them. Two honest notes from reading the transcript. The workers change was only kept on the third
 try (5, then 9, then 17 repeats), and rerunning until a comparison says `keep` inflates false wins, so
@@ -103,9 +133,9 @@ train-doctor's own interpreter, which has no torch. The agent worked around it (
 ## How it works
 
 A "2x faster" claim is only useful if you can trust it. train-doctor excludes warmup, brackets the
-measured window with a device synchronize, runs baseline and candidate several times in randomized
-interleaved order with the same seed, reports medians, spread and a bootstrap interval, and calls a
-change "faster" only when the whole interval clears a threshold. It also checks that the loss
+measured window with a device synchronize, runs baseline and candidate as back-to-back pairs with the
+same seed, compares them pair by pair, sets aside pairs where the machine stalled (and says so), and
+calls a change "faster" only when the whole interval clears a threshold. It also checks that the loss
 trajectory didn't move, so a speedup that broke training is rejected.
 
 train-doctor runs your real training command as a child process and stops it after a bounded window
@@ -132,10 +162,16 @@ for PyTorch:
   gradient accumulation (including DDP without `no_sync()`), cuDNN autotuning off, and training on CPU
   while an accelerator is available. Each finding carries the numbers it fired on, a suggested change,
   the expected effect (an upper bound where one can be computed) and the risk to results.
-- **Compare** runs one discarded warmup run per command, then K repeats per command (default 5) in
-  randomized pair order. Throughput is samples/s over the synchronized window. The verdict uses a 95%
-  percentile bootstrap interval on the ratio of medians: "faster" only if the whole interval is above
-  1 + min-effect (default 2%), "slower" if it's below 1 - min-effect, otherwise "no clear difference".
+- **Compare** runs one discarded warmup run per command, then K pairs (default 5): baseline and
+  candidate back to back, with the order alternating between pairs so slow drift cancels out.
+  Throughput is samples/s over the synchronized window, and each pair gives a candidate/baseline
+  ratio. A run is a stall when it is under half its own arm's median and beyond 4 scaled MADs, or under
+  a quarter of the median however noisy the arm is; pairs with a stalled run are set aside, at most 1
+  in 4 pairs, and listed in the result with the interval you'd get with them included. The verdict
+  uses a 95% percentile bootstrap interval of the median pair ratio: "faster" only if the whole
+  interval is above 1 + min-effect (default 2%), "slower" if it's below 1 - min-effect, otherwise "no
+  clear difference". The result also has the number of pairs the candidate won and an exact Wilcoxon
+  signed-rank test. A progress line per run goes to stderr (MCP: a progress notification).
   The loss check aligns both loss curves on samples seen, smooths them, and requires the mean and final
   relative difference to stay within a tolerance (default 5%). The decision is `keep` only when both pass.
 - **Reports**: every run directory gets `report.md` and `report.json` with the machine, versions,
@@ -180,6 +216,13 @@ CLI: `train-doctor profile|diagnose|compare|report|setup|mcp`, each with `--help
   can't tell you about final accuracy. Batch size and learning-rate changes are flagged as high risk for that reason.
 - Short windows on a busy machine are noisy. Reports record the load average and system CPU per run; when
   the spread is high, compare says so and is more likely to answer "no clear difference".
+- With 5 pairs the 95% interval is the range of the pair ratios, so one ordinary slow pair (not slow
+  enough to count as a stall) makes the answer "no clear difference". Use 9 repeats for small effects.
+- Stall handling is a rule with fixed thresholds, not a model of your machine. A slowdown that hits both
+  runs of a pair equally cancels out; one that hits a single run by less than 2x stays in and widens
+  the interval. Two stalls in 5 pairs is more than it will set aside. A stall in a candidate run is set
+  aside like any other, so if the change itself causes occasional stalls (recompiling, starting
+  workers), only a rerun will show it; the result says so when that happens.
 
 ## Privacy and safety
 

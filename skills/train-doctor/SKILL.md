@@ -44,12 +44,22 @@ Tools (MCP) or CLI equivalents:
    stays runnable. Don't batch several fixes into one comparison: you won't
    know which one helped or which one hurt.
 4. **Compare.** Run `compare` with the original command as baseline and the
-   changed one as candidate. Defaults: 1 discarded warmup run per arm, 5
-   measured repeats per arm in randomized pair order, same seed, 95%
-   bootstrap interval on the ratio of median throughput.
+   changed one as candidate. Defaults: 1 discarded warmup run per arm, then
+   5 pairs, each running baseline and candidate back to back (the order
+   alternates between pairs), same seed. Each pair gives a candidate/baseline
+   throughput ratio; the result is the median pair ratio with a 95% bootstrap
+   interval and how many pairs the candidate won. A pair where one run was
+   far slower than the other runs of the same command (a stall: another
+   process, swapping, the laptop sleeping) is set aside and listed under
+   `stalls` and `limits`, at most 1 pair in 5 (2 in 9). It takes a few
+   minutes; the CLI prints a line per run to stderr and the MCP tool sends
+   progress notifications, so don't kill it for being quiet.
 5. **Keep only clear wins.** Keep the change only when `decision` is `keep`:
    verdict `faster` (the whole interval clears 1 + min_effect) and the loss
-   trajectory `identical` or `within tolerance`. If the decision is
+   trajectory `identical` or `within tolerance`. With 5 pairs the interval
+   is the range of the pair ratios, so `faster` means every pair that wasn't
+   set aside beat 1 + min_effect; one ordinary slow pair makes it
+   `inconclusive`. If the decision is
    `inconclusive`, say so and either drop the change or rerun once with more
    repeats (`--repeats 9`) and a longer window (`--seconds 4`). Don't keep
    rerunning the same comparison until it says `keep`: that is how noise gets
@@ -60,14 +70,18 @@ Tools (MCP) or CLI equivalents:
 6. **Stack.** The kept candidate becomes the new baseline. Profile it again
    (the bottleneck moves) and repeat from step 2.
 7. **Report.** Give the user the compare report path(s) and quote the numbers
-   from them: medians, ratio and interval, loss check. Mention every limit the
-   report lists. Use the words the tool used: "no clear difference" is not
+   from them: medians, the median pair ratio and interval, how many pairs the
+   candidate won, any stalled pairs set aside, and the loss check. Mention
+   every limit the report lists. Use the words the tool used: "no clear difference" is not
    "slightly faster".
 
 ## Rules
 
 - Never claim a speedup inside the noise. A ratio of 1.03x with an interval
   of 0.97 to 1.09 is "no clear difference".
+- If a set-aside stall was in a candidate run and it happens again when you
+  rerun, the change may be causing it (recompiling, starting workers). Don't
+  keep calling it noise.
 - Changes flagged `risk: high` (batch size, learning rate) change training
   dynamics. The loss check will usually flag them. Don't keep them on speed
   alone; tell the user what changed and that convergence needs a longer run.

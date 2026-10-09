@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.1.2
+
+`compare` is now a paired comparison, so one stalled run on a busy laptop no longer decides the result.
+
+- Each repeat runs baseline and candidate back to back, and the order alternates between pairs
+  (`--order-seed` now only picks which command goes first in the first pair). Each pair gives one
+  candidate/baseline throughput ratio. The verdict comes from the median pair ratio and a 95%
+  percentile bootstrap interval of that median (10,000 resamples, seed 0), with the same thresholds as
+  before: `faster` only when the whole interval is above 1 + min-effect. 0.1.1 compared the two arms'
+  medians as independent samples, so a slow stretch of the machine could not cancel out and one
+  stalled run could blow the interval open (0.11 to 22.99 in the agent session quoted in the README).
+- Stalls are detected and reported instead of dominating. A run is a stall when its throughput is
+  below its own arm's median by more than 2x and more than 4 scaled MADs, or by more than 4x however
+  noisy the arm is (every run in an arm is the same command, so a gap like that is the machine). Pairs
+  with a stalled run are set aside, at most 1 in 4 pairs (1 of 5, 2 of 9), and only when at least 3
+  pairs remain. If more pairs look stalled, none are set aside and the result says the machine was too
+  busy. Set-aside pairs are listed in `stalls`, `pairs` and `limits`, with the interval you would get
+  with them included (`ratio_all_pairs`).
+- New result fields: `pairs` (per-pair values, ratio, stall flags), `wins` (pairs the candidate won),
+  `wilcoxon` (exact signed-rank test on the log pair ratios, with the smallest p the pair count allows),
+  `stalls`, `ratio_all_pairs`. `mann_whitney` is gone. Reasons now say how many pairs the candidate won,
+  and report.md has a per-pair table.
+- With 5 or fewer pairs, the bootstrap interval of the median is the range of the pair ratios, so
+  `faster` means every pair that was not set aside beat 1 + min-effect. This is stricter than 0.1.1 for
+  ordinary noise. `examples/reanalyze_paired.py` re-runs the committed 0.1.1 examples through the new
+  analysis: 7 of 9 verdicts are unchanged, one goes from no clear difference to faster (a stalled
+  candidate run set aside; the same change was faster with 9 repeats too) and one goes from faster to
+  no clear difference (one of its 5 pairs had a ratio of 1.00).
+- Progress: the CLI prints one line per run to stderr with the run's throughput and an estimate of the
+  time left, also with `--json` (stdout stays pure JSON; `--quiet` turns it off). The MCP `compare` tool
+  sends a progress notification after every run and no longer blocks the server while it works.
+- `examples/stall_once.py` freezes one chosen invocation of a training script mid-window, and
+  `examples/sleep_loop/` is a loop with a known 2x speedup. With one 60 s stall in a candidate run of the
+  tabular example's original vs final compare, 0.1.2 says keep (2.67x, 2.28 to 3.66, 4 of 4 pairs) where
+  the unpaired analysis of the same runs gives 0.02 to 3.66. All stall runs are under `examples/*/runs/`
+  and described in `examples/README.md`.
+
 ## 0.1.1
 
 Fixes from a first-time-user audit and a real Claude Code session driving the MCP server.
