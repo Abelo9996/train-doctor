@@ -1,0 +1,73 @@
+{
+  "cmd": [
+    "python",
+    "examples/stall_once.py",
+    "--counter",
+    "/tmp/td-stall-d-base.count",
+    "--",
+    "examples/tabular_mlp/train.py"
+  ],
+  "cwd": "~/Downloads/train-doctor",
+  "started_at": "2026-10-08T21:18:40+00:00",
+  "start_wall": 1791494320.70925,
+  "load_avg_1m": 3.23,
+  "wall_s": 6.817,
+  "exit_code": 0,
+  "timed_out": false,
+  "config": {
+    "cwd": ".",
+    "warmup_steps": 5,
+    "steps": 50,
+    "seconds": 4.0,
+    "timeout": 600.0,
+    "profiler_steps": 0,
+    "seed": 0,
+    "hook": true,
+    "stop_at_end": true,
+    "py_spy": false,
+    "sample_interval": 0.25,
+    "gpu_interval": 1.0,
+    "echo": false
+  },
+  "env_set": {
+    "TRAIN_DOCTOR_RUN_DIR": "examples/tabular_mlp/runs/20261008-171151-compare-original-vs-final-stall-in-candidate/baseline/rep-3",
+    "TRAIN_DOCTOR_WARMUP": "5",
+    "TRAIN_DOCTOR_STEPS": "50",
+    "TRAIN_DOCTOR_SECONDS": "4.0",
+    "TRAIN_DOCTOR_PROFILER_STEPS": "0",
+    "TRAIN_DOCTOR_STOP": "1",
+    "TRAIN_DOCTOR_SEED": "0"
+  },
+  "hook_dir": "~/Downloads/train-doctor/src/train_doctor/_hook",
+  "executable": "~/Downloads/train-doctor/.venv/bin/python",
+  "py_spy": null,
+  "kind": "compare-run",
+  "label": null,
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.2",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "provenance": {
+    "cwd": ".",
+    "file_sha256": {
+      "examples/stall_once.py": "bcc94c0baa15359992fbe87223b0c9b81bdbbff951fb12e3922ebaf47f18cf44",
+      "/tmp/td-stall-d-base.count": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
+      "examples/tabular_mlp/train.py": "596ad49ebb0770a135d8d7af003360e68167424e550b602e1464dc4d66bc6435"
+    },
+    "git_commit": "93a00d67cfd7d84b62e0e2b49dc4045088d474fd",
+    "git_dirty": true
+  }
+}

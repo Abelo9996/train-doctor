@@ -28,3 +28,19 @@ train-doctor profile --out $OUT --label ckpt-every-200 -- $MLP --ckpt-every 200
 train-doctor compare --seconds 4 --out $OUT --label workers-5 --baseline "$MLP --ckpt-every 200" --candidate "$MLP --ckpt-every 200 --num-workers 5"
 train-doctor profile --out $OUT --label workers-5 -- $MLP --ckpt-every 200 --num-workers 5
 train-doctor compare --seconds 4 --out $OUT --label original-vs-final --baseline "$MLP" --candidate "$MLP --ckpt-every 200 --num-workers 5"
+
+# 0.1.2: one injected stall (stall_once.py freezes the 4th invocation of one command, which is
+# measured pair 2 counting from 0, for 60 s inside its measured window). Load averages at run
+# starts are in examples/README.md.
+W="python examples/stall_once.py"
+S=examples/sleep_loop/train.py
+OUT=examples/sleep_loop/runs
+rm -f /tmp/td-stall-*.count
+train-doctor compare --out $OUT --label stall-in-candidate --baseline "$W --counter /tmp/td-stall-f-base.count -- $S --step-ms 20" --candidate "$W --counter /tmp/td-stall-f-cand.count --on-run 4 --sleep 60 -- $S --step-ms 10"
+train-doctor compare --out $OUT --label stall-in-baseline --baseline "$W --counter /tmp/td-stall-g-base.count --on-run 4 --sleep 60 -- $S --step-ms 20" --candidate "$W --counter /tmp/td-stall-g-cand.count -- $S --step-ms 10"
+CNN=examples/cnn_images/train.py
+MLP=examples/tabular_mlp/train.py
+train-doctor compare --out examples/cnn_images/runs --label stall-in-candidate-quiet --baseline "$W --counter /tmp/td-stall-h-base.count -- $CNN" --candidate "$W --counter /tmp/td-stall-h-cand.count --on-run 4 --sleep 60 -- $CNN --batch-augment"
+train-doctor compare --out examples/tabular_mlp/runs --label original-vs-final-stall-quiet --baseline "$W --counter /tmp/td-stall-i-base.count -- $MLP" --candidate "$W --counter /tmp/td-stall-i-cand.count --on-run 4 --sleep 60 -- $MLP --ckpt-every 200 --num-workers 5"
+# Re-analysis of every compare above (0.1.1 unpaired vs 0.1.2 paired):
+python examples/reanalyze_paired.py examples/*/runs/*compare*/compare.json

@@ -1,0 +1,32 @@
+{"wall": 1791493349.258251, "proc_cpu_pct": 0.0, "procs": 1, "tree_rss": 278528, "max_proc_rss": 278528, "sys_cpu_pct": 0.0, "gpu": {"backend": "apple", "gpus": [{"util_pct": 95.0, "name": "Apple M4"}]}}
+{"wall": 1791493349.576949, "proc_cpu_pct": 73.5, "procs": 1, "tree_rss": 61423616, "max_proc_rss": 61423616, "sys_cpu_pct": 59.9}
+{"wall": 1791493349.8438761, "proc_cpu_pct": 59.2, "procs": 1, "tree_rss": 96059392, "max_proc_rss": 96059392, "sys_cpu_pct": 73.2}
+{"wall": 1791493350.128365, "proc_cpu_pct": 44.2, "procs": 1, "tree_rss": 98992128, "max_proc_rss": 98992128, "sys_cpu_pct": 73.3}
+{"wall": 1791493350.392225, "proc_cpu_pct": 51.4, "procs": 1, "tree_rss": 110821376, "max_proc_rss": 110821376, "sys_cpu_pct": 79.8, "gpu": {"backend": "apple", "gpus": [{"util_pct": 95.0, "name": "Apple M4"}]}}
+{"wall": 1791493350.740145, "proc_cpu_pct": 38.7, "procs": 1, "tree_rss": 123142144, "max_proc_rss": 123142144, "sys_cpu_pct": 82.8}
+{"wall": 1791493351.025995, "proc_cpu_pct": 56.4, "procs": 1, "tree_rss": 130072576, "max_proc_rss": 130072576, "sys_cpu_pct": 71.4}
+{"wall": 1791493351.288398, "proc_cpu_pct": 69.2, "procs": 1, "tree_rss": 138936320, "max_proc_rss": 138936320, "sys_cpu_pct": 59.0}
+{"wall": 1791493351.550802, "proc_cpu_pct": 78.4, "procs": 1, "tree_rss": 142245888, "max_proc_rss": 142245888, "sys_cpu_pct": 46.3, "gpu": {"backend": "apple", "gpus": [{"util_pct": 99.0, "name": "Apple M4"}]}}
+{"wall": 1791493351.842211, "proc_cpu_pct": 86.8, "procs": 1, "tree_rss": 159744000, "max_proc_rss": 159744000, "sys_cpu_pct": 35.4}
+{"wall": 1791493352.100102, "proc_cpu_pct": 84.4, "procs": 1, "tree_rss": 188514304, "max_proc_rss": 188514304, "sys_cpu_pct": 30.5}
+{"wall": 1791493352.36126, "proc_cpu_pct": 97.8, "procs": 1, "tree_rss": 296239104, "max_proc_rss": 296239104, "sys_cpu_pct": 45.7}
+{"wall": 1791493352.62257, "proc_cpu_pct": 64.4, "procs": 1, "tree_rss": 300335104, "max_proc_rss": 300335104, "sys_cpu_pct": 0.0, "gpu": {"backend": "apple", "gpus": [{"util_pct": 100.0, "name": "Apple M4"}]}}
+{"wall": 1791493352.925471, "proc_cpu_pct": 77.0, "procs": 1, "tree_rss": 283541504, "max_proc_rss": 283541504, "sys_cpu_pct": 55.5}
+{"wall": 1791493353.190891, "proc_cpu_pct": 79.6, "procs": 1, "tree_rss": 280821760, "max_proc_rss": 280821760, "sys_cpu_pct": 46.6}
+{"wall": 1791493353.453797, "proc_cpu_pct": 83.5, "procs": 1, "tree_rss": 269615104, "max_proc_rss": 269615104, "sys_cpu_pct": 49.8}
+{"wall": 1791493353.7134972, "proc_cpu_pct": 90.9, "procs": 1, "tree_rss": 229343232, "max_proc_rss": 229343232, "sys_cpu_pct": 45.1, "gpu": {"backend": "apple", "gpus": [{"util_pct": 98.0, "name": "Apple M4"}]}}
+{"wall": 1791493354.0108721, "proc_cpu_pct": 81.7, "procs": 1, "tree_rss": 269500416, "max_proc_rss": 269500416, "sys_cpu_pct": 34.6}
+{"wall": 1791493354.269356, "proc_cpu_pct": 62.9, "procs": 1, "tree_rss": 313278464, "max_proc_rss": 313278464, "sys_cpu_pct": 33.2}
+{"wall": 1791493354.5318542, "proc_cpu_pct": 66.2, "procs": 1, "tree_rss": 353697792, "max_proc_rss": 353697792, "sys_cpu_pct": 49.4}
+{"wall": 1791493354.789305, "proc_cpu_pct": 69.7, "procs": 1, "tree_rss": 374374400, "max_proc_rss": 374374400, "sys_cpu_pct": 32.0, "gpu": {"backend": "apple", "gpus": [{"util_pct": 96.0, "name": "Apple M4"}]}}
+{"wall": 1791493355.074249, "proc_cpu_pct": 39.6, "procs": 1, "tree_rss": 374177792, "max_proc_rss": 374177792, "sys_cpu_pct": 36.1}
+{"wall": 1791493355.336541, "proc_cpu_pct": 36.0, "procs": 1, "tree_rss": 363528192, "max_proc_rss": 363528192, "sys_cpu_pct": 37.6}
+{"wall": 1791493355.611815, "proc_cpu_pct": 39.1, "procs": 1, "tree_rss": 327925760, "max_proc_rss": 327925760, "sys_cpu_pct": 50.4}
+{"wall": 1791493355.881532, "proc_cpu_pct": 46.0, "procs": 1, "tree_rss": 310689792, "max_proc_rss": 310689792, "sys_cpu_pct": 68.7, "gpu": {"backend": "apple", "gpus": [{"util_pct": 92.0, "name": "Apple M4"}]}}
+{"wall": 1791493356.2213278, "proc_cpu_pct": 58.0, "procs": 1, "tree_rss": 286375936, "max_proc_rss": 286375936, "sys_cpu_pct": 56.8}
+{"wall": 1791493356.484042, "proc_cpu_pct": 47.8, "procs": 1, "tree_rss": 273776640, "max_proc_rss": 273776640, "sys_cpu_pct": 48.8}
+{"wall": 1791493356.747634, "proc_cpu_pct": 49.5, "procs": 1, "tree_rss": 258473984, "max_proc_rss": 258473984, "sys_cpu_pct": 41.4}
+{"wall": 1791493357.0087621, "proc_cpu_pct": 37.7, "procs": 1, "tree_rss": 261292032, "max_proc_rss": 261292032, "sys_cpu_pct": 31.8, "gpu": {"backend": "apple", "gpus": [{"util_pct": 98.0, "name": "Apple M4"}]}}
+{"wall": 1791493357.3338912, "proc_cpu_pct": 86.9, "procs": 1, "tree_rss": 394903552, "max_proc_rss": 394903552, "sys_cpu_pct": 56.6}
+{"wall": 1791493357.594027, "proc_cpu_pct": 96.1, "procs": 1, "tree_rss": 381861888, "max_proc_rss": 381861888, "sys_cpu_pct": 56.3}
+{"wall": 1791493357.8560581, "proc_cpu_pct": 87.9, "procs": 1, "tree_rss": 402554880, "max_proc_rss": 402554880, "sys_cpu_pct": 47.3}

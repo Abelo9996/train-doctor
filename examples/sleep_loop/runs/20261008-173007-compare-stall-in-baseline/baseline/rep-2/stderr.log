@@ -1,0 +1,2 @@
+stall_once: sleeping 60 s after step 20 (invocation 4)
+[train-doctor] measurement window complete after 55 steps, stopping the run

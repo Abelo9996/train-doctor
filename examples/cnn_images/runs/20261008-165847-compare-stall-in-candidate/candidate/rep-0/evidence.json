@@ -1,0 +1,480 @@
+{
+  "source": "hook",
+  "pid": 53389,
+  "steps": {
+    "total": 55,
+    "warmup": 5,
+    "measured": 50,
+    "profiled": 0,
+    "boundary": "optimizer",
+    "end_reason": "window_complete"
+  },
+  "step_time_ms": {
+    "n": 50,
+    "median": 133.84962431155145,
+    "mean": 200.05846076644957,
+    "std": 244.93202450143937,
+    "cv": 1.224302254266445,
+    "min": 46.49199964478612,
+    "p10": 53.347162855789065,
+    "p25": 81.69865678064525,
+    "p75": 201.53239578939974,
+    "p90": 300.13455878943205,
+    "max": 1278.1182499602437,
+    "iqr": 119.83373900875449
+  },
+  "window": {
+    "duration_s": 10.069791249930859,
+    "steps": 50,
+    "samples": 3200,
+    "basis": "synchronized window: device synced at window start and end",
+    "wall_start": 1791493220.368018,
+    "wall_end": 1791493230.43784
+  },
+  "throughput": {
+    "steps_per_s": 4.965346228040557,
+    "samples_per_s": 317.78215859459567,
+    "metric": "samples_per_s"
+  },
+  "split": {
+    "data_wait": 0.15703236572656806,
+    "host_sync": 0.13860822085589322,
+    "checkpoint_save": 0.0,
+    "log_write": 0.0005168654743550478,
+    "other": 0.7038425479431837,
+    "basis": "share of summed step time over measured steps; 'other' is forward, backward, optimizer and Python overhead"
+  },
+  "per_step": {
+    "samples": 64.0,
+    "data_wait_ms": 31.415653377771378,
+    "sync_calls": 2.0,
+    "sync_ms": 27.72974731400609,
+    "cpu_scalar_reads": 0.0,
+    "backward_calls": 1.0,
+    "save_calls": 0.0,
+    "log_lines": 1.0,
+    "getitem_calls": 64.0
+  },
+  "data": {
+    "getitem_share_of_data_wait": 0.06843636201210983,
+    "getitem_ms_per_call": 0.03359332855325192,
+    "getitem_measured": true
+  },
+  "config": {
+    "device": "mps",
+    "torch": {
+      "version": "2.14.1",
+      "num_threads": 4,
+      "cuda_available": false,
+      "mps_available": true,
+      "compile_available": true,
+      "mps_autocast_supported": true
+    },
+    "first_step_wall": 1791493219.244114,
+    "dataloaders": [
+      {
+        "dataset": "SyntheticImages",
+        "num_workers": 0,
+        "pin_memory": false,
+        "batch_size": 64,
+        "persistent_workers": false,
+        "prefetch_factor": null,
+        "drop_last": true,
+        "len": 20000
+      }
+    ],
+    "autocast": [
+      [
+        "mps",
+        "float16",
+        false
+      ]
+    ],
+    "grad_scaler": false,
+    "compile_calls": [],
+    "ddp": false,
+    "ddp_no_sync_calls": 0,
+    "conv_modules": 3,
+    "params": 114186,
+    "param_dtypes": [
+      "float32"
+    ],
+    "optimizer": "SGD",
+    "python": "3.12.13",
+    "executable": "~/Downloads/train-doctor/.venv/bin/python",
+    "startup_to_first_step_s": 2.9424466667696834
+  },
+  "device_memory": {
+    "allocated_max": 2179328,
+    "driver_allocated_max": 97419264,
+    "total": 12713115648,
+    "used_fraction": 0.007662894501815201
+  },
+  "loss": [
+    [
+      0,
+      2.6226868629455566
+    ],
+    [
+      1,
+      2.3052754402160645
+    ],
+    [
+      2,
+      2.424234390258789
+    ],
+    [
+      3,
+      2.6975269317626953
+    ],
+    [
+      4,
+      2.5499753952026367
+    ],
+    [
+      5,
+      2.5084195137023926
+    ],
+    [
+      6,
+      2.3767402172088623
+    ],
+    [
+      7,
+      2.4159364700317383
+    ],
+    [
+      8,
+      2.469203472137451
+    ],
+    [
+      9,
+      2.4819602966308594
+    ],
+    [
+      10,
+      2.2903199195861816
+    ],
+    [
+      11,
+      2.507427215576172
+    ],
+    [
+      12,
+      2.300448417663574
+    ],
+    [
+      13,
+      2.1779940128326416
+    ],
+    [
+      14,
+      2.3990938663482666
+    ],
+    [
+      15,
+      2.4806036949157715
+    ],
+    [
+      16,
+      2.401893138885498
+    ],
+    [
+      17,
+      2.2658281326293945
+    ],
+    [
+      18,
+      2.3642420768737793
+    ],
+    [
+      19,
+      2.1513071060180664
+    ],
+    [
+      20,
+      2.2683639526367188
+    ],
+    [
+      21,
+      2.054844617843628
+    ],
+    [
+      22,
+      1.8959499597549438
+    ],
+    [
+      23,
+      2.2126660346984863
+    ],
+    [
+      24,
+      1.8835053443908691
+    ],
+    [
+      25,
+      2.0563995838165283
+    ],
+    [
+      26,
+      2.152970790863037
+    ],
+    [
+      27,
+      2.3045763969421387
+    ],
+    [
+      28,
+      2.136806011199951
+    ],
+    [
+      29,
+      1.914222002029419
+    ],
+    [
+      30,
+      1.894597053527832
+    ],
+    [
+      31,
+      1.7753560543060303
+    ],
+    [
+      32,
+      1.968376636505127
+    ],
+    [
+      33,
+      1.9803937673568726
+    ],
+    [
+      34,
+      1.647855520248413
+    ],
+    [
+      35,
+      1.7737919092178345
+    ],
+    [
+      36,
+      1.7466908693313599
+    ],
+    [
+      37,
+      1.8391852378845215
+    ],
+    [
+      38,
+      1.937695860862732
+    ],
+    [
+      39,
+      1.5913636684417725
+    ],
+    [
+      40,
+      1.7306524515151978
+    ],
+    [
+      41,
+      1.5404832363128662
+    ],
+    [
+      42,
+      1.7640265226364136
+    ],
+    [
+      43,
+      1.777137279510498
+    ],
+    [
+      44,
+      1.6609138250350952
+    ],
+    [
+      45,
+      1.5996835231781006
+    ],
+    [
+      46,
+      1.4159259796142578
+    ],
+    [
+      47,
+      1.486513614654541
+    ],
+    [
+      48,
+      1.3602147102355957
+    ],
+    [
+      49,
+      1.9348318576812744
+    ],
+    [
+      50,
+      1.3728656768798828
+    ],
+    [
+      51,
+      1.508979082107544
+    ],
+    [
+      52,
+      1.7650684118270874
+    ],
+    [
+      53,
+      1.3360782861709595
+    ],
+    [
+      54,
+      1.3922550678253174
+    ]
+  ],
+  "samples_by_step": [
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64,
+    64
+  ],
+  "profiler_errors": [],
+  "resources": {
+    "scope": "measured window",
+    "n_samples": 17,
+    "proc_cpu_pct_mean": 16.829411764705885,
+    "proc_cpu_pct_p90": 29.46,
+    "cores_logical": 10,
+    "sys_cpu_pct_mean": 72.87647058823529,
+    "processes_max": 1,
+    "tree_rss_peak": 243990528,
+    "max_proc_rss_peak": 243990528,
+    "gpu": {
+      "backend": "apple",
+      "name": "Apple M4",
+      "n_samples": 9,
+      "util_pct_mean": 88.11111111111111,
+      "util_pct_max": 100.0,
+      "mem_used_mib_max": null,
+      "mem_total_mib": null,
+      "util_scope": "system-wide (ioreg Device Utilization %)"
+    }
+  },
+  "profiler": null,
+  "py_spy": null,
+  "run": {
+    "cmd": [
+      "python",
+      "examples/stall_once.py",
+      "--counter",
+      "/tmp/td-stall-a-cand.count",
+      "--on-run",
+      "4",
+      "--sleep",
+      "60",
+      "--",
+      "examples/cnn_images/train.py",
+      "--batch-augment"
+    ],
+    "cwd": "~/Downloads/train-doctor",
+    "executable": "~/Downloads/train-doctor/.venv/bin/python",
+    "started_at": "2026-10-08T20:59:44+00:00",
+    "wall_s": 50.862,
+    "exit_code": 0,
+    "timed_out": false,
+    "env_set": {
+      "TRAIN_DOCTOR_RUN_DIR": "examples/cnn_images/runs/20261008-165847-compare-stall-in-candidate/candidate/rep-0",
+      "TRAIN_DOCTOR_WARMUP": "5",
+      "TRAIN_DOCTOR_STEPS": "50",
+      "TRAIN_DOCTOR_SECONDS": "2.0",
+      "TRAIN_DOCTOR_PROFILER_STEPS": "0",
+      "TRAIN_DOCTOR_STOP": "1",
+      "TRAIN_DOCTOR_SEED": "0"
+    },
+    "provenance": {
+      "cwd": ".",
+      "file_sha256": {
+        "examples/stall_once.py": "bcc94c0baa15359992fbe87223b0c9b81bdbbff951fb12e3922ebaf47f18cf44",
+        "/tmp/td-stall-a-cand.count": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+        "examples/cnn_images/train.py": "8fe198f974a847b1bf9538c7c49b802c0b5b3206ae3b828a2af097ebb8cc3fe5"
+      },
+      "git_commit": "93a00d67cfd7d84b62e0e2b49dc4045088d474fd",
+      "git_dirty": true
+    },
+    "label": null,
+    "load_avg_1m": 21.16,
+    "time_to_first_step_s": 34.79597091674805
+  },
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.2",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "limits": [
+    "Apple GPU utilization comes from ioreg and is system-wide: other apps using the GPU are included.",
+    "Time inside sync calls includes waiting for queued device work, so it is not all wasted time; removing a sync helps by letting the host queue the next step earlier."
+  ]
+}

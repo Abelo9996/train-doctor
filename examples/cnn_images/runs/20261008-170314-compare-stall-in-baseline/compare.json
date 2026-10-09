@@ -1,0 +1,365 @@
+{
+  "kind": "compare",
+  "label": "stall-in-baseline",
+  "root": "examples/cnn_images/runs/20261008-170314-compare-stall-in-baseline",
+  "commands": {
+    "baseline": [
+      "python",
+      "examples/stall_once.py",
+      "--counter",
+      "/tmp/td-stall-b-base.count",
+      "--on-run",
+      "4",
+      "--sleep",
+      "60",
+      "--",
+      "examples/cnn_images/train.py"
+    ],
+    "candidate": [
+      "python",
+      "examples/stall_once.py",
+      "--counter",
+      "/tmp/td-stall-b-cand.count",
+      "--",
+      "examples/cnn_images/train.py",
+      "--batch-augment"
+    ]
+  },
+  "settings": {
+    "repeats": 5,
+    "warmup_runs": 1,
+    "warmup_steps": 5,
+    "steps": 50,
+    "seconds": 2.0,
+    "seed": 0,
+    "loss_tol": 0.05,
+    "min_effect": 0.02,
+    "order_seed": 0,
+    "design": "paired: each repeat runs baseline and candidate back to back, order alternating between pairs",
+    "interval": "95% percentile bootstrap of the median pair ratio (candidate / baseline), 10000 resamples, seed 0; stalled pairs set aside first (a run under half its arm's median and beyond 4 MADs, or under a quarter of it), at most 1 per 4 pairs"
+  },
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.2",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "metric": "samples_per_s",
+  "runs": [
+    {
+      "order": 0,
+      "phase": "warmup",
+      "arm": "baseline",
+      "index": 0,
+      "dir": "warmup/baseline-0",
+      "value": 2146.8889903349523,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 6.206485986709595,
+      "sys_cpu_pct_mean": 45.2375,
+      "load_avg_1m": 30.99
+    },
+    {
+      "order": 1,
+      "phase": "warmup",
+      "arm": "candidate",
+      "index": 0,
+      "dir": "warmup/candidate-0",
+      "value": 1643.2512248479293,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 4.35861611366272,
+      "sys_cpu_pct_mean": 52.31428571428571,
+      "load_avg_1m": 26.84
+    },
+    {
+      "order": 2,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 0,
+      "dir": "baseline/rep-0",
+      "value": 1747.8805245464634,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 4.16684103012085,
+      "sys_cpu_pct_mean": 39.1,
+      "load_avg_1m": 24.42
+    },
+    {
+      "order": 3,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 0,
+      "dir": "candidate/rep-0",
+      "value": 1391.7883972710804,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 5.924806118011475,
+      "sys_cpu_pct_mean": 63.6,
+      "load_avg_1m": 21.43
+    },
+    {
+      "order": 4,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 1,
+      "dir": "candidate/rep-1",
+      "value": 906.5504965247989,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.0634472370147705,
+      "sys_cpu_pct_mean": 33.175000000000004,
+      "load_avg_1m": 19.57
+    },
+    {
+      "order": 5,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 1,
+      "dir": "baseline/rep-1",
+      "value": 911.9564905748791,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 5.312303066253662,
+      "sys_cpu_pct_mean": 46.475,
+      "load_avg_1m": 18.48
+    },
+    {
+      "order": 6,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 2,
+      "dir": "baseline/rep-2",
+      "value": 48.14451859154639,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 15.90523386001587,
+      "sys_cpu_pct_mean": 58.98544600938967,
+      "load_avg_1m": 17.04
+    },
+    {
+      "order": 7,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 2,
+      "dir": "candidate/rep-2",
+      "value": 3434.801691640496,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 26.0298490524292,
+      "sys_cpu_pct_mean": 54.800000000000004,
+      "load_avg_1m": 16.83
+    },
+    {
+      "order": 8,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 3,
+      "dir": "candidate/rep-3",
+      "value": 461.27102964430867,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 13.551846981048584,
+      "sys_cpu_pct_mean": 54.27391304347826,
+      "load_avg_1m": 34.65
+    },
+    {
+      "order": 9,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 3,
+      "dir": "baseline/rep-3",
+      "value": 355.12314546481934,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 10.014556884765625,
+      "sys_cpu_pct_mean": 61.232,
+      "load_avg_1m": 28.59
+    },
+    {
+      "order": 10,
+      "phase": "measure",
+      "arm": "baseline",
+      "index": 4,
+      "dir": "baseline/rep-4",
+      "value": 546.8452217084191,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 4.621410131454468,
+      "sys_cpu_pct_mean": 45.904761904761905,
+      "load_avg_1m": 26.46
+    },
+    {
+      "order": 11,
+      "phase": "measure",
+      "arm": "candidate",
+      "index": 4,
+      "dir": "candidate/rep-4",
+      "value": 2528.1357983253724,
+      "exit_code": 0,
+      "source": "hook",
+      "time_to_first_step_s": 3.7360169887542725,
+      "sys_cpu_pct_mean": 56.82857142857143,
+      "load_avg_1m": 21.76
+    }
+  ],
+  "errors": [],
+  "limits": [
+    "Set aside 1 stalled pair(s) out of 5: baseline repeat 2 ran at 48.14 samples/s, 11.4 times slower than that arm's median 546.8. Every run in an arm is the same command, so a gap that large is the machine (another process, swapping, sleep), not the change. With all pairs the interval would be 0.80 to 71.34.",
+    "Pair ratios vary a lot (from 0.80 to 4.62), so the machine's speed changed between pairs; close other apps for a firmer answer.",
+    "The machine was busy: the 1-minute load average reached 34.6 on 10 logical cores during the runs, so other processes competed for CPU. Pairing cancels slow stretches that hit both runs of a pair, not ones that hit only one. Rerun when the machine is quieter for a firmer answer.",
+    "candidate repeat 2 took over 3 times the usual time to reach the first step, a sign the machine was stalled by other work. Rerun when the machine is quieter if the verdict matters.",
+    "Apple laptops change clock speeds with temperature and power state; pairing and alternating the order reduce but don't remove that drift."
+  ],
+  "throughput": {
+    "baseline": {
+      "n": 5,
+      "median": 546.8452217084191,
+      "mean": 721.9899801772256,
+      "std": 653.4281427650417,
+      "cv": 0.9050376884796183,
+      "min": 48.14451859154639,
+      "p10": 170.9359693408556,
+      "p25": 355.12314546481934,
+      "p75": 911.9564905748791,
+      "p90": 1413.5109109578298,
+      "max": 1747.8805245464634,
+      "iqr": 556.8333451100598
+    },
+    "candidate": {
+      "n": 5,
+      "median": 1391.7883972710804,
+      "mean": 1744.5094826812115,
+      "std": 1219.0617609625267,
+      "cv": 0.6987991599156563,
+      "min": 461.27102964430867,
+      "p10": 639.3828163965047,
+      "p25": 906.5504965247989,
+      "p75": 2528.1357983253724,
+      "p90": 3072.1353343144465,
+      "max": 3434.801691640496,
+      "iqr": 1621.5853018005737
+    }
+  },
+  "ratio": {
+    "point": 1.1363118639124585,
+    "low": 0.7962720436124883,
+    "high": 4.623128625732765,
+    "n_pairs": 4
+  },
+  "ratio_all_pairs": {
+    "point": 1.298904437897318,
+    "low": 0.7962720436124883,
+    "high": 71.34356707938099,
+    "n_pairs": 5
+  },
+  "pairs": [
+    {
+      "pair": 0,
+      "baseline": 1747.8805245464634,
+      "candidate": 1391.7883972710804,
+      "ratio": 0.7962720436124883,
+      "log_ratio": -0.22781438819326716,
+      "stalled": [],
+      "excluded": false
+    },
+    {
+      "pair": 1,
+      "baseline": 911.9564905748791,
+      "candidate": 906.5504965247989,
+      "ratio": 0.9940720921382199,
+      "log_ratio": -0.005945547653508533,
+      "stalled": [],
+      "excluded": false
+    },
+    {
+      "pair": 2,
+      "baseline": 48.14451859154639,
+      "candidate": 3434.801691640496,
+      "ratio": 71.34356707938102,
+      "log_ratio": 4.267507179793445,
+      "stalled": [
+        "baseline"
+      ],
+      "excluded": true,
+      "stall_notes": [
+        "baseline repeat 2 ran at 48.14 samples/s, 11.4 times slower than that arm's median 546.8"
+      ]
+    },
+    {
+      "pair": 3,
+      "baseline": 355.12314546481934,
+      "candidate": 461.27102964430867,
+      "ratio": 1.298904437897318,
+      "log_ratio": 0.26152116908345063,
+      "stalled": [],
+      "excluded": false
+    },
+    {
+      "pair": 4,
+      "baseline": 546.8452217084191,
+      "candidate": 2528.1357983253724,
+      "ratio": 4.623128625732765,
+      "log_ratio": 1.5310716676198501,
+      "stalled": [],
+      "excluded": false
+    }
+  ],
+  "wins": {
+    "candidate_faster": 2,
+    "pairs": 4
+  },
+  "wilcoxon": {
+    "w_plus": 7.0,
+    "n": 4,
+    "p_two_sided": 0.625,
+    "p_min": 0.125
+  },
+  "stalls": {
+    "pairs": [
+      2
+    ],
+    "set_aside": [
+      2
+    ],
+    "max_set_aside": 1
+  },
+  "verdict": "no clear difference",
+  "loss_check": {
+    "axis": "samples",
+    "points": 55,
+    "smoothing": 5,
+    "tol": 0.05,
+    "mean_rel_diff": 0.014528823753299832,
+    "final_rel_diff": 0.006357734697261544,
+    "max_rel_diff": 0.045233032125652065,
+    "baseline_final": 1.5758048176765442,
+    "candidate_final": 1.5657862687110902,
+    "final_points": 10,
+    "status": "within tolerance",
+    "baseline_self_diff": {
+      "status": "identical",
+      "max_rel_diff": 0.0,
+      "mean_rel_diff": 0.0,
+      "final_rel_diff": 0.0
+    }
+  },
+  "decision": "inconclusive",
+  "reason": "no clear difference: the 95% interval 0.80 to 4.62 does not clear the 2% threshold on either side (won 2 of 4 pairs)",
+  "time_to_first_step_s": {
+    "baseline": 5.312303066253662,
+    "candidate": 5.924806118011475
+  },
+  "next_step": "No clear difference, and other work on the machine disturbed the runs (see limits). More repeats rarely fix that: rerun this compare when the machine is quieter, or drop the change. Don't report it as faster."
+}

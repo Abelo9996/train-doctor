@@ -1,0 +1,77 @@
+{
+  "cmd": [
+    "python",
+    "examples/stall_once.py",
+    "--counter",
+    "/tmp/td-stall-b-base.count",
+    "--on-run",
+    "4",
+    "--sleep",
+    "60",
+    "--",
+    "examples/cnn_images/train.py"
+  ],
+  "cwd": "~/Downloads/train-doctor",
+  "started_at": "2026-10-08T21:06:53+00:00",
+  "start_wall": 1791493613.287682,
+  "load_avg_1m": 26.46,
+  "wall_s": 13.267,
+  "exit_code": 0,
+  "timed_out": false,
+  "config": {
+    "cwd": ".",
+    "warmup_steps": 5,
+    "steps": 50,
+    "seconds": 2.0,
+    "timeout": 600.0,
+    "profiler_steps": 0,
+    "seed": 0,
+    "hook": true,
+    "stop_at_end": true,
+    "py_spy": false,
+    "sample_interval": 0.25,
+    "gpu_interval": 1.0,
+    "echo": false
+  },
+  "env_set": {
+    "TRAIN_DOCTOR_RUN_DIR": "examples/cnn_images/runs/20261008-170314-compare-stall-in-baseline/baseline/rep-4",
+    "TRAIN_DOCTOR_WARMUP": "5",
+    "TRAIN_DOCTOR_STEPS": "50",
+    "TRAIN_DOCTOR_SECONDS": "2.0",
+    "TRAIN_DOCTOR_PROFILER_STEPS": "0",
+    "TRAIN_DOCTOR_STOP": "1",
+    "TRAIN_DOCTOR_SEED": "0"
+  },
+  "hook_dir": "~/Downloads/train-doctor/src/train_doctor/_hook",
+  "executable": "~/Downloads/train-doctor/.venv/bin/python",
+  "py_spy": null,
+  "kind": "compare-run",
+  "label": null,
+  "machine": {
+    "os": "Darwin 25.2.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores_physical": 10,
+    "cores_logical": 10,
+    "ram_bytes": 17179869184,
+    "tool_python": "3.12.13",
+    "train_doctor": "0.1.2",
+    "gpu_backend": "apple",
+    "gpus": [
+      {
+        "name": "Apple M4"
+      }
+    ]
+  },
+  "provenance": {
+    "cwd": ".",
+    "file_sha256": {
+      "examples/stall_once.py": "bcc94c0baa15359992fbe87223b0c9b81bdbbff951fb12e3922ebaf47f18cf44",
+      "/tmp/td-stall-b-base.count": "e7f6c011776e8db7cd330b54174fd76f7d0216b612387a5ffcfb81e6f0919683",
+      "examples/cnn_images/train.py": "8fe198f974a847b1bf9538c7c49b802c0b5b3206ae3b828a2af097ebb8cc3fe5"
+    },
+    "git_commit": "93a00d67cfd7d84b62e0e2b49dc4045088d474fd",
+    "git_dirty": true
+  }
+}
