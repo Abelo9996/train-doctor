@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+### Fixed
+
+- Require mcp 1.30 or newer. The old floor (`mcp>=1.2`) allowed releases that no longer import with current pydantic; the MCP server's tests pass on 1.30.0 and 2.3.0.
+
 ## 0.1.2
 
 `compare` is now a paired comparison, so one stalled run on a busy laptop no longer decides the result.
