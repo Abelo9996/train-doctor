@@ -6,7 +6,6 @@ inputs always produce the same interval.
 
 from __future__ import annotations
 
-import functools
 import math
 import random
 from collections.abc import Sequence
@@ -89,52 +88,134 @@ def bootstrap_ratio_ci(
     return point, quantile(ratios, alpha), quantile(ratios, 1 - alpha)
 
 
-def mann_whitney_u(a: Sequence[float], b: Sequence[float]) -> tuple[float, float]:
-    """U statistic for ``b > a`` and its exact two-sided p-value (small samples, no ties correction).
+def bootstrap_median_ci(
+    xs: Sequence[float],
+    level: float = 0.95,
+    n_boot: int = 10_000,
+    seed: int = 0,
+) -> tuple[float, float, float]:
+    """Median of ``xs`` with a percentile bootstrap interval. Returns ``(point, low, high)``.
 
-    Exact enumeration is fine for the repeat counts used here (n <= 12 per arm).
+    At the 95% level with 5 or fewer values, the interval is the range of the values:
+    a resample has the smallest value as its median in more than 2.5% of draws.
     """
-    na, nb = len(a), len(b)
-    u = 0.0
-    for x in a:
-        for y in b:
-            if y > x:
-                u += 1
-            elif y == x:
-                u += 0.5
-    if na == 0 or nb == 0:
-        return u, 1.0
-    if na > 12 or nb > 12:
-        # normal approximation
-        mu = na * nb / 2
-        sigma = math.sqrt(na * nb * (na + nb + 1) / 12)
-        z = (u - mu) / sigma if sigma else 0.0
-        p = math.erfc(abs(z) / math.sqrt(2))
-        return u, min(1.0, p)
-    # exact null distribution of U via counting rank-sum arrangements
-    counts = _u_distribution(na, nb)
-    total = sum(counts.values())
-    mu = na * nb / 2
-    dev = abs(u - mu)
-    extreme = sum(c for k, c in counts.items() if abs(k - mu) >= dev - 1e-9)
-    return u, min(1.0, extreme / total)
+    if not xs:
+        raise ValueError("need at least one value")
+    rng = random.Random(seed)
+    n = len(xs)
+    meds = [median([xs[rng.randrange(n)] for _ in range(n)]) for _ in range(n_boot)]
+    alpha = (1 - level) / 2
+    return median(xs), quantile(meds, alpha), quantile(meds, 1 - alpha)
 
 
-def _u_distribution(na: int, nb: int) -> dict[float, int]:
-    # number of orderings giving each U value, by dynamic programming over (i, j)
+def wilcoxon_signed_rank(d: Sequence[float]) -> dict:
+    """Exact two-sided Wilcoxon signed-rank test that the differences ``d`` are centered on 0.
 
-    @functools.cache
-    def f(i: int, j: int) -> tuple:
-        if i == 0 or j == 0:
-            return ((0, 1),)
-        out: dict[int, int] = {}
-        for k, c in f(i, j - 1):  # largest element is from b: it beats all i elements of a
-            out[k + i] = out.get(k + i, 0) + c
-        for k, c in f(i - 1, j):  # largest element is from a: adds nothing
-            out[k] = out.get(k, 0) + c
-        return tuple(sorted(out.items()))
+    Zero differences are dropped and tied magnitudes get average ranks; the null
+    distribution is counted exactly (dynamic programming over doubled ranks), so
+    ties don't need a correction. ``p_min`` is the smallest p-value the number of
+    nonzero differences allows (2 / 2**n): with 5 pairs it is 0.0625.
+    """
+    nz = [x for x in d if x != 0]
+    n = len(nz)
+    if n == 0:
+        return {"w_plus": 0.0, "n": 0, "p_two_sided": 1.0, "p_min": 1.0}
+    order = sorted(range(n), key=lambda i: abs(nz[i]))
+    ranks2 = [0] * n  # doubled ranks, integers even with ties
+    i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and abs(nz[order[j + 1]]) == abs(nz[order[i]]):
+            j += 1
+        for k in range(i, j + 1):
+            ranks2[order[k]] = i + j + 2  # 2 * average of ranks i+1 .. j+1
+        i = j + 1
+    w2 = sum(r for r, x in zip(ranks2, nz, strict=True) if x > 0)
+    counts = {0: 1}
+    for r in ranks2:
+        nxt = dict(counts)
+        for s, c in counts.items():
+            nxt[s + r] = nxt.get(s + r, 0) + c
+        counts = nxt
+    total = 2**n
+    mu2 = sum(ranks2) / 2
+    dev = abs(w2 - mu2)
+    extreme = sum(c for s, c in counts.items() if abs(s - mu2) >= dev - 1e-9)
+    return {"w_plus": w2 / 2, "n": n, "p_two_sided": min(1.0, extreme / total), "p_min": min(1.0, 2 / total)}
 
-    return {float(k): c for k, c in f(na, nb)}
+
+def find_stalls(xs: Sequence[float], factor: float = 2.0, mads: float = 4.0, hard_factor: float = 4.0) -> list[bool]:
+    """Flag runs that are far slower than the other runs of the same command.
+
+    On a log scale, a run is a stall when its throughput is below the arm's median
+    by more than ``factor`` (default: under half the median) and by more than
+    ``mads`` scaled median absolute deviations, or when it is below the median by
+    more than ``hard_factor`` however noisy the arm is (default: under a quarter).
+    Every run in an arm executes the same command, so a gap that large is the
+    machine, not the change.
+    """
+    logs = [math.log(x) if x and x > 0 else float("-inf") for x in xs]
+    finite = [v for v in logs if v != float("-inf")]
+    if len(finite) < 3:
+        return [v == float("-inf") for v in logs]
+    m = median(finite)
+    mad = 1.4826 * median([abs(v - m) for v in finite])
+    limit = min(max(math.log(factor), mads * mad), math.log(hard_factor))
+    return [m - v > limit for v in logs]
+
+
+def paired_analysis(
+    baseline: Sequence[float],
+    candidate: Sequence[float],
+    *,
+    level: float = 0.95,
+    n_boot: int = 10_000,
+    seed: int = 0,
+) -> dict:
+    """Paired comparison of throughput: ``baseline[i]`` and ``candidate[i]`` ran back to back.
+
+    Each pair gives a log ratio ``log(candidate / baseline)``. Pairs where either
+    run is a stall (see ``find_stalls``) are set aside, at most ``n // 4`` of them
+    (1 of 5, 2 of 9) and only if at least 3 pairs remain; if more pairs look
+    stalled, none are set aside and ``stalls_kept`` says so. The estimate is the
+    median pair ratio, with a percentile bootstrap interval of that median.
+    """
+    if len(baseline) != len(candidate):
+        raise ValueError("baseline and candidate need one value per pair")
+    n = len(baseline)
+    if n < 2:
+        raise ValueError("need at least 2 pairs")
+    sb, sc = find_stalls(baseline), find_stalls(candidate)
+    pairs = []
+    for i, (b, c) in enumerate(zip(baseline, candidate, strict=True)):
+        stalled = [arm for arm, flag in (("baseline", sb[i]), ("candidate", sc[i])) if flag]
+        pairs.append({"pair": i, "baseline": b, "candidate": c, "ratio": c / b, "log_ratio": math.log(c / b), "stalled": stalled})
+    flagged = [p["pair"] for p in pairs if p["stalled"]]
+    cap = n // 4 if n >= 4 else 0
+    excluded = flagged if flagged and len(flagged) <= cap and n - len(flagged) >= 3 else []
+    for p in pairs:
+        p["excluded"] = p["pair"] in excluded
+
+    def estimate(sel: list[dict]) -> dict:
+        logs = [p["log_ratio"] for p in sel]
+        point, lo, hi = bootstrap_median_ci(logs, level, n_boot, seed)
+        return {"point": math.exp(point), "low": math.exp(lo), "high": math.exp(hi), "n_pairs": len(sel)}
+
+    kept = [p for p in pairs if not p["excluded"]]
+    out = {
+        "pairs": pairs,
+        "ratio": estimate(kept),
+        "wins": sum(1 for p in kept if p["ratio"] > 1),
+        "n_pairs": len(kept),
+        "wilcoxon": wilcoxon_signed_rank([p["log_ratio"] for p in kept]),
+        "stalled_pairs": flagged,
+        "excluded_pairs": excluded,
+        "stalls_kept": [i for i in flagged if i not in excluded],
+        "max_excluded": cap,
+    }
+    if excluded:
+        out["ratio_all_pairs"] = estimate(pairs)
+    return out
 
 
 def verdict(ratio_low: float, ratio_high: float, min_effect: float) -> str:
