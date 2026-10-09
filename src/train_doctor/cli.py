@@ -65,7 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--baseline", required=True, help="baseline command, quoted")
     p.add_argument("--candidate", required=True, help="candidate command, quoted")
-    p.add_argument("--repeats", type=int, default=5, help="measured runs per command (default 5)")
+    p.add_argument("--repeats", type=int, default=5, help="measured pairs (default 5; a verdict needs at least 4 usable pairs)")
     p.add_argument("--warmup-runs", type=int, default=1, help="discarded runs per command before measuring (default 1)")
     p.add_argument("--seed", type=int, default=0, help="seed set in both commands before their own seeding (default 0)")
     p.add_argument("--loss-tol", type=float, default=0.05, help="allowed relative loss difference, mean and final (default 0.05)")

@@ -86,24 +86,35 @@ def test_timeout_is_enforced(tmp_path, script):
 
 def test_compare_detects_clear_speedup(tmp_path, script):
     base = script("loop.py", MARKER_LOOP)
-    res = api.compare([*base, "0.04"], [*base, "0.01"], repeats=3, warmup_runs=0, out_dir=tmp_path / "runs", **FAST)
+    res = api.compare([*base, "0.04"], [*base, "0.01"], repeats=4, warmup_runs=0, out_dir=tmp_path / "runs", **FAST)
     assert res["metric"] == "samples_per_s"
     assert res["verdict"] == "faster"
     assert res["ratio"]["low"] > 1.2  # nominally 4x; loose because macOS CI runners measured 1.32 once
     assert res["loss_check"]["status"] == "identical"
     assert res["decision"] == "keep"
     measured = [r for r in res["runs"] if r["phase"] == "measure"]
-    assert len(measured) == 6
+    assert len(measured) == 8
     root = tmp_path / "runs" / next((tmp_path / "runs").iterdir()).name
     assert (root / "compare.json").exists() and (root / "report.md").exists()
     assert "Decision: **keep**" in (root / "report.md").read_text()
 
 
+def test_three_pairs_never_give_a_verdict(tmp_path, script):
+    # A macOS CI runner once called an identical command 'faster' from 3 pairs: with 3, the interval is
+    # the range of 3 ratios, which covers the true ratio only 75% of the time. Now 3 pairs can't decide.
+    base = script("loop.py", MARKER_LOOP)
+    res = api.compare([*base, "0.04"], [*base, "0.01"], repeats=3, warmup_runs=0, out_dir=tmp_path / "runs", **FAST)
+    assert res["verdict"] == "no clear difference" and res["decision"] == "inconclusive"
+    assert "a verdict needs at least 4" in res["reason"] and "75%" in res["reason"]
+    assert res["next_step"].startswith("Too few usable pairs") or "quieter" in res["next_step"]
+
+
 def test_compare_same_command_is_not_called_faster(tmp_path, script):
     cmd = [*script("loop.py", MARKER_LOOP), "0.01"]
-    res = api.compare(cmd, cmd, repeats=3, warmup_runs=0, min_effect=0.1, out_dir=tmp_path / "runs", **FAST)
-    # The property under test: an identical command is never reported as a speedup. On a noisy hosted
-    # runner, 3 repeats of a 10 ms sleep loop can still land as "slower", which is not a false speedup.
+    res = api.compare(cmd, cmd, repeats=5, warmup_runs=0, min_effect=0.1, out_dir=tmp_path / "runs", **(FAST | {"steps": 30}))
+    # The property under test: an identical command is never reported as a speedup. With 5 pairs that
+    # needs all 5 pair ratios above 1.1. A noisy hosted runner can still land on "slower", which is not
+    # a false speedup.
     assert res["verdict"] in {"no clear difference", "slower"}
     assert res["decision"] != "keep"
     assert res["loss_check"]["status"] == "identical"

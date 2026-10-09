@@ -28,6 +28,10 @@
   analysis: 7 of 9 verdicts are unchanged, one goes from no clear difference to faster (a stalled
   candidate run set aside; the same change was faster with 9 repeats too) and one goes from faster to
   no clear difference (one of its 5 pairs had a ratio of 1.00).
+- A faster or slower verdict needs at least 4 usable pairs. With 3 the interval is the range of 3
+  ratios, which covers the true ratio only 75% of the time, and a macOS CI runner called an identical
+  command faster that way during this release. Results with 5 or fewer pairs state the interval's real
+  coverage (1 - 2/2^n) in `limits`.
 - Progress: the CLI prints one line per run to stderr with the run's throughput and an estimate of the
   time left, also with `--json` (stdout stays pure JSON; `--quiet` turns it off). The MCP `compare` tool
   sends a progress notification after every run and no longer blocks the server while it works.

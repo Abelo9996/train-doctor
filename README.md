@@ -216,8 +216,11 @@ CLI: `train-doctor profile|diagnose|compare|report|setup|mcp`, each with `--help
   can't tell you about final accuracy. Batch size and learning-rate changes are flagged as high risk for that reason.
 - Short windows on a busy machine are noisy. Reports record the load average and system CPU per run; when
   the spread is high, compare says so and is more likely to answer "no clear difference".
-- With 5 pairs the 95% interval is the range of the pair ratios, so one ordinary slow pair (not slow
-  enough to count as a stall) makes the answer "no clear difference". Use 9 repeats for small effects.
+- With 5 or fewer pairs the "95%" bootstrap interval is the range of the pair ratios, which covers the
+  true median ratio with probability 1 - 2/2^n (93.75% for 5 pairs, 87.5% for 4, the case after one stall
+  is set aside), and the result says so. Fewer than 4 usable pairs never gets a faster or slower verdict
+  (a macOS CI runner called an identical command faster from 3 pairs). One ordinary slow pair, not slow
+  enough to count as a stall, makes the answer "no clear difference". Use 9 repeats for small effects.
 - Stall handling is a rule with fixed thresholds, not a model of your machine. A slowdown that hits both
   runs of a pair equally cancels out; one that hits a single run by less than 2x stays in and widens
   the interval. Two stalls in 5 pairs is more than it will set aside. A stall in a candidate run is set

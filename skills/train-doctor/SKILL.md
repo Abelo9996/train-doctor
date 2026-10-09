@@ -59,7 +59,8 @@ Tools (MCP) or CLI equivalents:
    trajectory `identical` or `within tolerance`. With 5 pairs the interval
    is the range of the pair ratios, so `faster` means every pair that wasn't
    set aside beat 1 + min_effect; one ordinary slow pair makes it
-   `inconclusive`. If the decision is
+   `inconclusive`. Fewer than 4 usable pairs never gives a verdict, so don't
+   lower `repeats` below 5. If the decision is
    `inconclusive`, say so and either drop the change or rerun once with more
    repeats (`--repeats 9`) and a longer window (`--seconds 4`). Don't keep
    rerunning the same comparison until it says `keep`: that is how noise gets

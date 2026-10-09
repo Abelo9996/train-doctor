@@ -25,6 +25,10 @@ from train_doctor.runner import CommandError, RunConfig, not_found_hint, resolve
 from train_doctor.stats import describe, median, paired_analysis, stdev, verdict
 
 DEFAULT_OUT = ".train-doctor/runs"
+# With n pairs, the 95% bootstrap interval of the median is the range of the pair ratios for n <= 5,
+# and the range covers the true median ratio with probability 1 - 2 / 2**n: 75% for 3 pairs, 87.5%
+# for 4, 93.75% for 5. Below 4 usable pairs that is too weak to call anything faster or slower.
+MIN_PAIRS_FOR_VERDICT = 4
 
 
 def as_argv(cmd: str | list[str]) -> list[str]:
@@ -283,7 +287,8 @@ def compare(
             "design": "paired: each repeat runs baseline and candidate back to back, order alternating between pairs",
             "interval": (
                 "95% percentile bootstrap of the median pair ratio (candidate / baseline), 10000 resamples, seed 0; "
-                "stalled pairs set aside first (a run under half its arm's median and beyond 4 MADs, or under a quarter of it), at most 1 per 4 pairs"
+                "stalled pairs set aside first (a run under half its arm's median and beyond 4 MADs, or under a quarter of it), at most 1 per 4 pairs; "
+                "with 5 or fewer pairs the interval is the range of the pair ratios (coverage 1 - 2/2^n), and a verdict needs at least 4 pairs"
             ),
         },
         "machine": machine,
@@ -324,6 +329,9 @@ def compare(
     ra = pa["ratio"]
     point, lo, hi = ra["point"], ra["low"], ra["high"]
     v = verdict(lo, hi, min_effect)
+    too_few = ra["n_pairs"] < MIN_PAIRS_FOR_VERDICT
+    if too_few:
+        v = "no clear difference"
     result["throughput"] = {"baseline": describe(b), "candidate": describe(c)}
     result["ratio"] = {"point": point, "low": lo, "high": hi, "n_pairs": ra["n_pairs"]}
     if "ratio_all_pairs" in pa:
@@ -360,6 +368,13 @@ def compare(
     elif v == "slower":
         decision = "reject"
         reason = f"candidate is slower ({point:.2f}x, 95% interval {lo:.2f} to {hi:.2f}, {wins})"
+    elif too_few:
+        decision = "inconclusive"
+        reason = (
+            f"no clear difference: only {ra['n_pairs']} usable pairs ({wins}, interval {lo:.2f} to {hi:.2f}), and a verdict needs at "
+            f"least {MIN_PAIRS_FOR_VERDICT}: with {ra['n_pairs']} the interval is the range of the pair ratios, which covers the true "
+            f"ratio only {1 - 2 / 2 ** ra['n_pairs']:.0%} of the time"
+        )
     else:
         decision = "inconclusive"
         reason = f"no clear difference: the 95% interval {lo:.2f} to {hi:.2f} does not clear the {min_effect:.0%} threshold on either side ({wins})"
@@ -436,7 +451,17 @@ def compare(
         result["limits"].append(
             "Apple laptops change clock speeds with temperature and power state; pairing and alternating the order reduce but don't remove that drift."
         )
+    if ra["n_pairs"] <= 5:
+        result["limits"].append(
+            f"With {ra['n_pairs']} pairs the 95% bootstrap interval is the range of the pair ratios, which covers the true median ratio "
+            f"with probability {1 - 2 / 2 ** ra['n_pairs']:.2%} rather than 95%"
+            + (f"; a faster or slower verdict needs at least {MIN_PAIRS_FOR_VERDICT} usable pairs." if too_few else ".")
+        )
     result["next_step"] = compare_next_step(decision, v, loss["status"], len(pa["pairs"]), busy)
+    if too_few and not busy:
+        result["next_step"] = (
+            f"Too few usable pairs for a verdict. Compare again with repeats=5 or more (at least {MIN_PAIRS_FOR_VERDICT} must succeed)."
+        )
     _write_compare(root, result)
     return result
 
