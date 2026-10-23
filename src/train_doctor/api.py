@@ -200,6 +200,8 @@ def compare(
     out_dir: str | Path = DEFAULT_OUT,
     echo: bool = False,
     label: str | None = None,
+    baseline_env: dict | None = None,
+    candidate_env: dict | None = None,
     progress: Callable[[int, int, str], None] | None = None,
 ) -> dict:
     """Run baseline and candidate as ``repeats`` back-to-back pairs and judge the candidate.
@@ -219,6 +221,8 @@ def compare(
     root = new_run_dir(out_dir, "compare", label)
     machine = machine_info()
 
+    arm_env = {"baseline": baseline_env or {}, "candidate": candidate_env or {}}
+
     def cfg_for(arm: str) -> RunConfig:
         return RunConfig(
             cmd=arms[arm],
@@ -230,6 +234,7 @@ def compare(
             profiler_steps=0,
             seed=seed,
             echo=echo,
+            env=dict(arm_env[arm]),
         )
 
     # order_seed only picks which arm goes first in the first pair; after that the order alternates
@@ -308,6 +313,9 @@ def compare(
         "errors": errors,
         "limits": [],
     }
+    if candidate_env or baseline_env:
+        result["settings"]["baseline_env"] = baseline_env or {}
+        result["settings"]["candidate_env"] = candidate_env or {}
     if metric == "steps_per_s":
         result["limits"].append(
             "Samples per step were not detected in every run, so throughput is compared in steps per second. That is only fair if both commands do the same work per step."

@@ -30,6 +30,7 @@ import atexit
 import importlib
 import importlib.abc
 import importlib.util
+import inspect
 import json
 import os
 import platform
@@ -42,6 +43,36 @@ import time
 ENV_RUN_DIR = "TRAIN_DOCTOR_RUN_DIR"
 
 _installed = False
+
+
+def _fix_overrides() -> dict:
+    """Runtime fixes requested by ``train-doctor fix``, read from the environment.
+
+    Every value comes from a ``TRAIN_DOCTOR_FIX_*`` variable the parent set for the
+    candidate arm of a comparison. They are applied to torch in this process without
+    touching the user's source, so the same unchanged command can be measured with and
+    without a change. An empty dict means nothing is overridden.
+    """
+    over: dict = {}
+    nw = os.environ.get("TRAIN_DOCTOR_FIX_NUM_WORKERS")
+    if nw not in (None, ""):
+        try:
+            over["num_workers"] = max(0, int(nw))
+        except ValueError:
+            pass
+    pf = os.environ.get("TRAIN_DOCTOR_FIX_PREFETCH_FACTOR")
+    if pf not in (None, ""):
+        try:
+            over["prefetch_factor"] = max(1, int(pf))
+        except ValueError:
+            pass
+    for key, env in (("persistent_workers", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS"),
+                     ("pin_memory", "TRAIN_DOCTOR_FIX_PIN_MEMORY"),
+                     ("cudnn_benchmark", "TRAIN_DOCTOR_FIX_CUDNN_BENCHMARK")):
+        v = os.environ.get(env)
+        if v not in (None, ""):
+            over[key] = v == "1"
+    return over
 
 
 def _env_int(name: str, default: int) -> int:
@@ -550,6 +581,7 @@ def _patch_torch(torch) -> None:
     r = R
     if r is None:
         return
+    over = _fix_overrides()
     seed = os.environ.get("TRAIN_DOCTOR_SEED")
     if seed not in (None, ""):
         try:
@@ -647,6 +679,8 @@ def _patch_torch(torch) -> None:
             return out
 
         dl._BaseDataLoaderIter.__next__ = __next__
+        if any(k in over for k in ("num_workers", "pin_memory", "persistent_workers", "prefetch_factor")):
+            _patch_dataloader_init(dl, over)
     except Exception as e:  # pragma: no cover
         r.meta["dataloader_patch_error"] = repr(e)
 
@@ -790,6 +824,70 @@ def _patch_torch(torch) -> None:
             return orig_conv_init(self, *a, **k)
 
         conv._ConvNd.__init__ = conv_init
+    except Exception:
+        pass
+
+    _apply_backend_fixes(torch, over)
+
+
+def _patch_dataloader_init(dl, over: dict) -> None:
+    """Rewrite DataLoader construction arguments so the candidate arm uses the requested loader settings.
+
+    torch forbids changing num_workers/persistent_workers/batch_size after a DataLoader is built, so the
+    override happens at construction: the bound arguments are edited and passed on. Any failure falls back
+    to the untouched call, so instrumenting never breaks a run.
+    """
+    orig = dl.DataLoader.__init__
+    if getattr(orig, "_td_fix", False):
+        return
+    try:
+        sig = inspect.signature(orig)
+    except (TypeError, ValueError):
+        return
+
+    def __init__(self, *args, **kwargs):
+        try:
+            bound = sig.bind_partial(self, *args, **kwargs)
+            a = dict(bound.arguments)
+            applied: dict = {}
+            if "num_workers" in over:
+                a["num_workers"] = over["num_workers"]
+                applied["num_workers"] = over["num_workers"]
+                if over["num_workers"] > 0:
+                    if "persistent_workers" in over:
+                        a["persistent_workers"] = bool(over["persistent_workers"])
+                        applied["persistent_workers"] = a["persistent_workers"]
+                    if "prefetch_factor" in over:
+                        a["prefetch_factor"] = over["prefetch_factor"]
+                        applied["prefetch_factor"] = a["prefetch_factor"]
+                else:
+                    a["persistent_workers"] = False
+                    a.pop("prefetch_factor", None)
+            if "pin_memory" in over:
+                a["pin_memory"] = bool(over["pin_memory"])
+                applied["pin_memory"] = a["pin_memory"]
+            a.pop("self", None)
+            rr = R
+            if rr is not None and applied:
+                rr.meta.setdefault("dataloader_fix", applied)
+            return orig(self, **a)
+        except Exception:
+            return orig(self, *args, **kwargs)
+
+    __init__._td_fix = True
+    __init__.__wrapped__ = orig
+    dl.DataLoader.__init__ = __init__
+
+
+def _apply_backend_fixes(torch, over: dict) -> None:
+    """Apply process-wide backend switches (currently cuDNN autotuning) for the candidate arm."""
+    if not over.get("cudnn_benchmark"):
+        return
+    try:
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
+            if R is not None:
+                R.meta.setdefault("backend_fix", {})["cudnn_benchmark"] = True
     except Exception:
         pass
 

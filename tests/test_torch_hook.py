@@ -77,3 +77,17 @@ def test_accumulation_amp_and_save_are_seen(tmp_path, script):
     assert ev["per_step"]["samples"] == 64
     assert ev["per_step"]["save_calls"] == 1
     assert ["cpu", "bfloat16", True] in ev["config"]["autocast"]
+
+
+def test_fix_injects_dataloader_workers(tmp_path, script):
+    """A TRAIN_DOCTOR_FIX_* setting changes the constructed DataLoader without touching the script."""
+    from train_doctor.evidence import write_evidence
+    from train_doctor.runner import RunConfig, run
+
+    cmd = script("train.py", LOOP)
+    cfg = RunConfig(cmd=cmd, warmup_steps=1, steps=4, seconds=0.0, env={"TRAIN_DOCTOR_FIX_NUM_WORKERS": "2", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS": "1"})
+    run(cfg, tmp_path / "r")
+    ev = write_evidence(tmp_path / "r")
+    assert ev["config"]["dataloader_fix"] == {"num_workers": 2, "persistent_workers": True}
+    dl = ev["config"]["dataloaders"][0]
+    assert dl["num_workers"] == 2 and dl["persistent_workers"] is True

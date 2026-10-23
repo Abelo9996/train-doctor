@@ -167,6 +167,8 @@ def hook_summary(events: list[dict]) -> dict | None:
             "python",
             "executable",
             "startup_to_first_step_s",
+            "dataloader_fix",
+            "backend_fix",
         )
     }
     out["config"] = cfg
@@ -366,15 +368,17 @@ def failure_summary(run_dir: Path, run: dict) -> dict:
     tail = "\n".join(lines[-12:])
     exe = run.get("executable") or (run.get("cmd") or ["?"])[0]
     hint = "Read the stderr tail, fix the command, and run it again."
+    missing = None
     m = re.search(r"ModuleNotFoundError: No module named '([^']+)'", tail)
     if m:
+        missing = m.group(1).split(".")[0]
         hint = (
-            f"The command ran {exe}, which can't import {m.group(1)}. Pass the interpreter that has your training "
-            "dependencies, for example `.venv/bin/python train.py` or the output of `which python` in your training environment."
+            f"The command ran {exe}, which can't import {m.group(1)}. Install {missing} into that interpreter's "
+            "environment, or pass the interpreter that has your training dependencies (for example `.venv/bin/python train.py`)."
         )
     elif run.get("timed_out"):
         hint = "The run hit the timeout before the window closed. Raise --timeout, or lower --steps and --seconds."
-    return {"exit_code": run.get("exit_code"), "executable": exe, "stderr_tail": tail, "hint": hint}
+    return {"exit_code": run.get("exit_code"), "executable": exe, "stderr_tail": tail, "hint": hint, "missing_module": missing}
 
 
 def summarize(run_dir: Path) -> dict:

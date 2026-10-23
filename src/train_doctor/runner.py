@@ -183,6 +183,76 @@ def child_path(path: str | None = None) -> str:
     return os.pathsep.join(d for d in path.split(os.pathsep) if d and os.path.realpath(d) != own_real)
 
 
+_BARE_PYTHON = {"python", "python3"}
+
+
+def find_target_python(cwd: str = ".") -> tuple[str | None, str]:
+    """The interpreter the target repository would use, found the way the repo arranges it.
+
+    Looks for a project virtualenv (``.venv``/``venv``/``.env``, as uv and ``python -m venv``
+    create) and then a poetry environment. Returns ``(path, how)`` or ``(None, "")``.
+    """
+    base = Path(cwd)
+    binname = "Scripts/python.exe" if os.name == "nt" else "bin/python"
+    for rel in (".venv", "venv", ".env"):
+        cand = base / rel / binname
+        if cand.is_file():
+            return str(cand), f"the {rel} virtualenv in the target directory"
+    if shutil.which("poetry") and ((base / "poetry.lock").exists() or (base / "pyproject.toml").exists()):
+        try:
+            out = subprocess.run(["poetry", "env", "info", "-p"], cwd=cwd, capture_output=True, text=True, timeout=15, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            out = None
+        if out and out.returncode == 0 and out.stdout.strip():
+            cand = Path(out.stdout.strip()) / binname
+            if cand.is_file():
+                return str(cand), "the poetry environment"
+    return None, ""
+
+
+def resolve_target_interpreter(cmd: list[str], cwd: str = ".") -> tuple[list[str], str | None]:
+    """Point a bare ``python``/``python3`` at the target repo's interpreter.
+
+    A command that already names an explicit interpreter (a path, or ``python3.12``) is left
+    alone. Returns ``(command, note)`` where ``note`` explains any change, or a clear message
+    when no interpreter could be found.
+    """
+    if not cmd or os.sep in cmd[0] or cmd[0] not in _BARE_PYTHON:
+        return list(cmd), None
+    path, how = find_target_python(cwd)
+    if path:
+        return [path, *cmd[1:]], f"resolved `{cmd[0]}` to {path} ({how})"
+    alt = shutil.which("python3", path=child_path()) or shutil.which("python", path=child_path())
+    if alt:
+        return [alt, *cmd[1:]], (
+            f"no project virtualenv found; using {alt} on PATH for `{cmd[0]}`. "
+            "If it does not have your training dependencies, pass the full path to the interpreter that does."
+        )
+    return list(cmd), (
+        f"could not resolve `{cmd[0]}`: no project virtualenv and no python on PATH. "
+        "Pass the full interpreter path, for example .venv/bin/python."
+    )
+
+
+def install_missing(interpreter: str, module: str, cwd: str = ".") -> tuple[bool, str]:
+    """Install ``module`` into ``interpreter``'s environment, preferring its own pip, then uv."""
+    attempts = [[interpreter, "-m", "pip", "install", module]]
+    uv = shutil.which("uv")
+    if uv:
+        attempts.append([uv, "pip", "install", "--python", interpreter, module])
+    last = ""
+    for cmd in attempts:
+        try:
+            out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=600, check=False)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            last = str(e)
+            continue
+        if out.returncode == 0:
+            return True, f"installed {module} with `{' '.join(cmd)}`"
+        last = (out.stderr or out.stdout).strip().splitlines()[-1] if (out.stderr or out.stdout).strip() else "non-zero exit"
+    return False, f"could not install {module}: {last}"
+
+
 def resolve_executable(cmd: list[str], cwd: str = ".") -> str | None:
     """Absolute path of the program the command will start, using the child's PATH."""
     if not cmd:
