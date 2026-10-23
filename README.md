@@ -1,17 +1,74 @@
 # train-doctor
 
-Give your agent a way to find out why your training run is slow, fix it, and prove the speedup.
+Find out why your training run is slow, fix it, and prove the speedup, in one command.
 
 ```bash
-uvx train-doctor profile -- python train.py        # where does step time go?
-uvx train-doctor compare --baseline "python train.py" --candidate "python train_fixed.py"  # did the fix help?
-uvx train-doctor setup                             # give Claude Code, Codex and Cursor the MCP tools
+uvx train-doctor fix -- python train.py            # profile, try the fixes, prove the winner
+uvx train-doctor profile -- python train.py        # or just: where does step time go?
+uvx train-doctor compare --baseline "python train.py" --candidate "python train_fixed.py"  # did a change help?
+uvx train-doctor setup --agent claude              # give your coding agent the MCP tools
 ```
 
+`fix` profiles the command, turns the top findings into the changes it can apply on its own, measures
+each one against the original with a paired, noise-aware benchmark, keeps only the clear winners, checks
+the loss trajectory is unchanged, and ends with "before -> after, Nx faster, loss unchanged" plus a
+reversible patch and a result card. If nothing clears the bar it says "no proven win" and lists what it
+tried. It never reports a speedup the benchmark did not confirm.
+
 Run it from the environment that has your training dependencies (an activated venv or conda env), or
-give the interpreter's full path: `uvx train-doctor profile -- .venv/bin/python train.py`. train-doctor
+give the interpreter's full path: `uvx train-doctor fix -- .venv/bin/python train.py`. A bare `python`
+is resolved to the target repo's `.venv`/`venv` or poetry interpreter automatically. train-doctor
 doesn't install torch; it runs your command with your interpreter. It needs [uv](https://docs.astral.sh/uv/)
-for `uvx` (or `pip install train-doctor`). A profile takes a few seconds past your script's startup.
+for `uvx` (or `pip install train-doctor`; add `[card]` for PNG cards). A profile takes a few seconds past
+your script's startup; a full `fix` takes a few minutes.
+
+## What `fix` can prove, and what it only suggests
+
+`fix` applies a change by injecting it into the candidate run, so the baseline and candidate are the same
+unchanged command and only the injected setting differs. That keeps the set of automatic changes small
+and safe:
+
+| Change | Applied by `fix` | Notes |
+|---|---|---|
+| DataLoader `num_workers` | yes | Loss-neutral: with `persistent_workers=False` the shuffle RNG advances as single-process. |
+| `pin_memory`, cuDNN autotuning | yes, on CUDA | NVIDIA paths are untested on the author's hardware (Apple M4 / MPS and CPU). |
+| `persistent_workers` | suggested | Avoids re-spawning workers per epoch but changes the per-epoch shuffle order. |
+| device move, mixed precision, `torch.compile`, batch size, removing per-step `.item()`/sync points | suggested | Need a source change `fix` will not make blindly; it reports them with evidence so you can decide. |
+
+Everything `fix` applies is also written as a reversible unified diff against your script (applied with
+`--keep`, otherwise left as a patch file).
+
+## `fix` on a real script
+
+A real run from this repo: [examples/fix_targets/mnist_cnn](examples/fix_targets/mnist_cnn), a small
+MNIST-style CNN whose dataset generates and blurs each image in `__getitem__` with `num_workers=0`. Apple
+M4 (10 cores, 16 GB), torch 2.14.1 on MPS.
+
+![train-doctor fix on examples/fix_targets/mnist_cnn: 2.16x faster, loss unchanged](https://raw.githubusercontent.com/Abelo9996/train-doctor/main/examples/fix_targets/mnist_cnn/mnist_cnn.card.png)
+
+```text
+$ train-doctor fix -- .venv/bin/python examples/fix_targets/mnist_cnn/train.py
+Profiling .venv/bin/python examples/fix_targets/mnist_cnn/train.py
+Trying DataLoader workers (num_workers=5)
+  [3/12] pair 1 of 5, baseline: 7337.8 samples/s in 4.5 s, about 52 s left
+  [4/12] pair 1 of 5, candidate: 16009.1 samples/s in 8.5 s, about 51 s left
+  ...
+  DataLoader workers (num_workers=5): keep (candidate is faster (2.16x, 95% interval 1.46 to 2.23,
+  won 5 of 5 pairs) and the loss trajectory is identical)
+
+mnist_cnn: 7,375.6 -> 16,000.3 samples/s, 2.16x faster (95% interval 1.46 to 2.23), loss unchanged.
+
+proven change: num_workers=5
+patch: .train-doctor/fix_targets/train.fix.patch (apply: git apply <patch>; reverse: git apply -R <patch>)
+card: mnist_cnn.card.png and mnist_cnn.card.svg
+```
+
+The proof is a paired comparison: five times it ran the unchanged command and the same command with the
+workers injected, back to back, and the candidate won every pair with the loss byte-for-byte identical.
+The patch it wrote changes one line (`num_workers=args.num_workers` -> `num_workers=5`). On two other
+scripts in [examples/fix_targets](examples/fix_targets) (a char-level LSTM on CPU, a compute-bound tabular
+MLP) `fix` found no change it could apply on its own and said "no proven win", with the real findings
+listed as suggestions, instead of reporting a comparison it would have to call inconclusive.
 
 ## Example output
 
@@ -91,8 +148,9 @@ loaded machine where other slow pairs kept the answer inconclusive, are in
 
 ## Use it with your agent
 
-Run `uvx train-doctor setup --yes`, open your training project in Claude Code (or Codex or Cursor) and type
-what you'd say to a colleague:
+Run `uvx train-doctor setup --agent claude --yes` (or `--agent codex` / `--agent cursor`; without `--agent`
+it only prints what it would do and touches no agent config), open your training project in Claude Code (or
+Codex or Cursor) and type what you'd say to a colleague:
 
 ```text
 train.py is way slower than it should be. Can you figure out why, make it faster, and show me the
@@ -184,14 +242,18 @@ change, and uses `compare` to decide whether to keep it.
 ## Setup for agents
 
 ```bash
-uvx train-doctor setup          # shows what it would change
-uvx train-doctor setup --yes    # applies it
+uvx train-doctor setup --agent claude          # shows what it would change for Claude Code
+uvx train-doctor setup --agent claude --yes    # applies it
 ```
 
-`setup` detects Claude Code, Codex and Cursor. It runs `claude mcp add --scope user train-doctor -- uvx train-doctor mcp`,
-adds `[mcp_servers.train-doctor]` to `~/.codex/config.toml`, adds the server to `~/.cursor/mcp.json`, and copies the
-skill to `~/.claude/skills/train-doctor/` and `~/.codex/skills/train-doctor/`. It backs up every file it edits and
-does nothing when an entry is already there. `--project DIR` also writes a project `.mcp.json`.
+`setup` registers the MCP server and skill with the agent(s) you name with `--agent`
+(`claude`, `codex`, `cursor`; repeatable) and nothing else: it does not touch `~/.claude`, `~/.codex` or
+`~/.cursor` unless that agent is named, so running it never changes an agent's config by surprise. For
+Claude Code it runs `claude mcp add --scope user train-doctor -- uvx train-doctor mcp` and copies the skill
+to `~/.claude/skills/train-doctor/`; for Codex it adds `[mcp_servers.train-doctor]` to `~/.codex/config.toml`
+and the skill to `~/.codex/skills/`; for Cursor it adds the server to `~/.cursor/mcp.json`. It backs up
+every file it edits and does nothing when an entry is already there. `--project DIR` writes a project
+`.mcp.json` and needs no agent.
 
 MCP tools: `profile`, `diagnose`, `compare`, `report`, `version`. Every `profile` and `compare` result
 has a `next_step` that says what to do next, and a command that fails before its first step returns an

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+One command takes a slow training run to a proven speedup: `train-doctor fix -- <command>`.
+
+- `fix` profiles the command, turns the top findings into the changes it can apply on its own, measures
+  each with the existing paired, noise-aware `compare`, keeps only the clear winners (and the
+  combination of winners), checks the loss trajectory stays within tolerance, and ends with
+  "before -> after, Nx faster, loss unchanged", a reversible patch, and a result card. When nothing
+  clears the bar it says "no proven win" and lists what it tried and why each lost. New `fix` MCP tool
+  and `train-doctor fix` CLI command.
+- Candidates are applied by injecting settings into the candidate run, not by editing the user's
+  source, so the same unchanged command is the baseline and the candidate and only the injected setting
+  differs. Applied automatically: DataLoader `num_workers` (loss-neutral: with the default
+  `persistent_workers=False` the shuffle RNG advances exactly as single-process), plus `pin_memory` and
+  cuDNN autotuning on CUDA. Everything else the rules find (device moves, mixed precision,
+  torch.compile, batch size, removing per-step sync points, and `persistent_workers`, which changes the
+  per-epoch shuffle order) is reported as a suggestion, not measured, so the result stays honest about
+  what was proven. NVIDIA paths are untested on the author's hardware.
+- The proven change is also written as a reversible unified diff against the training script (DataLoader
+  keyword arguments, or a line after `import torch`), applied to the file with `--keep` (a backup is
+  kept) or left as a patch file otherwise. Patching is conservative: if the script can't be found,
+  parsed, or edited unambiguously, no patch is written and the exact edit is described instead.
+- Result card in SVG (always) and PNG (`pip install 'train-doctor[card]'`, a pure `resvg-py` wheel):
+  "name: Nx faster, loss unchanged" with "check yours: uvx train-doctor fix -- <command>".
+- Friction fixes:
+  - A bare `python`/`python3` in the command is resolved to the target repository's interpreter (its
+    `.venv`/`venv` or poetry environment) before running, with a clear message when none is found.
+  - `fix --install-missing` installs a missing training dependency into the target interpreter's
+    environment (its own pip, then uv) and retries; without the flag it prints the exact install command.
+  - `setup` no longer edits `~/.claude`, `~/.codex` or `~/.cursor` unless that agent is named with
+    `--agent claude|codex|cursor` (repeatable). `--project DIR` still writes a project `.mcp.json`.
+- `examples/fix_targets/` has three small real training scripts `fix` was validated on (an MNIST-style
+  CNN, a char-level LSTM, a tabular MLP) with the runs and their outcomes.
+
 ## 0.1.3
 
 ### Fixed

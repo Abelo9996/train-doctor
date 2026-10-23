@@ -1,6 +1,6 @@
 ---
 name: train-doctor
-description: Find out why a training run is slow, fix it one change at a time, and prove each speedup with repeated, interleaved measurements and a loss check. Use when a user asks why training is slow, wants a faster training loop, or wants to verify that an optimization actually helped.
+description: Find out why a training run is slow, fix it, and prove each speedup with repeated, interleaved measurements and a loss check. Use when a user asks why training is slow, wants a faster training loop, or wants to verify that an optimization actually helped.
 ---
 
 # train-doctor
@@ -15,12 +15,29 @@ Tools (MCP) or CLI equivalents:
 
 | MCP tool | CLI |
 |---|---|
+| `fix(command=[...])` | `train-doctor fix -- <command>` |
 | `profile(command=[...])` | `train-doctor profile -- <command>` |
 | `diagnose(run_dir)` | `train-doctor diagnose [RUN_DIR]` |
 | `compare(baseline=[...], candidate=[...])` | `train-doctor compare --baseline "<cmd>" --candidate "<cmd>"` |
 | `report(run_dir)` | `train-doctor report [RUN_DIR]` |
 
-## Workflow
+## The one-call path: `fix`
+
+For "make my training faster", call `fix` with the user's exact training
+command. It profiles the command, turns the top findings into the changes it
+can apply on its own (DataLoader `num_workers`, and `pin_memory`/cuDNN
+autotuning on CUDA), measures each with `compare`, keeps only the clear winners
+and the combination of winners, checks the loss stays within tolerance, and
+returns a `headline` ("before -> after, Nx faster, loss unchanged"), the proven
+change, a reversible `patch` (applied with `keep=True`, else written as a patch
+file), a result card, and `suggestions` for findings that need a source change
+it will not make blindly (device moves, mixed precision, torch.compile, batch
+size, removing sync points). If nothing clears the bar it says "no proven win"
+and lists what it tried. Report the headline and the evidence path; apply the
+patch only if the user wants it. When you need to understand or change something
+`fix` will not do on its own, drop to the step-by-step workflow below.
+
+## Step-by-step workflow
 
 1. **Profile the unchanged command.** Use the exact command the user runs,
    with the interpreter that has their training dependencies (if `python`
