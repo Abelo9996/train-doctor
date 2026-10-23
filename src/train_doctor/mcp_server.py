@@ -11,7 +11,7 @@ import anyio
 import anyio.from_thread
 import anyio.to_thread
 
-from train_doctor import __version__, api
+from train_doctor import __version__, api, autofix
 
 try:  # mcp 2.x
     from mcp.server.mcpserver import Context
@@ -194,6 +194,67 @@ def build_server():
         res = head | {k: v for k, v in res.items() if k != "machine" and k not in head}
         res["report"] = res["root"] + "/report.md"
         return res
+
+    @server.tool()
+    async def fix(
+        command: list[str] | str,
+        ctx: Context,
+        cwd: str = ".",
+        budget: int = 4,
+        keep: bool = False,
+        repeats: int = 5,
+        warmup_runs: int = 1,
+        warmup_steps: int = 5,
+        steps: int = 50,
+        seconds: float = 2.0,
+        seed: int = 0,
+        loss_tol: float = 0.05,
+        min_effect: float = 0.02,
+        timeout: float = 600.0,
+        out_dir: str = api.DEFAULT_OUT,
+    ) -> dict:
+        """Profile a training command, try the changes train-doctor can apply itself, and prove the winners end to end.
+
+        This is the one-call path. It profiles `command` (same format as profile's `command`), turns the top findings
+        into candidate changes it can apply without editing source (DataLoader num_workers/persistent_workers/pin_memory,
+        cuDNN autotuning), measures each with `compare` (so the loss check and stall handling apply), keeps only the clear
+        winners and the combination of winners, and returns a `headline` ("before -> after, Nx faster, loss unchanged"),
+        the `proven` change with its evidence directory, a reversible `patch` (applied to the script when keep=True,
+        otherwise written as a patch file), a result `card` (SVG, plus PNG when resvg-py is installed), the `candidates`
+        it tried with each decision and why, and `suggestions` for findings that need a source change it will not make on
+        its own. If nothing is proven, `headline` says "no proven win" and lists what was tried. Sends a progress
+        notification as it works. Takes a few minutes: one compare per candidate.
+        """
+        total = max(1, budget) + 1
+
+        def progress(msg: str) -> None:
+            try:
+                anyio.from_thread.run(functools.partial(ctx.report_progress, 0, total, msg))
+            except Exception:
+                pass
+
+        res = await anyio.to_thread.run_sync(
+            functools.partial(
+                autofix.fix,
+                command,
+                budget=budget,
+                keep=keep,
+                cwd=cwd,
+                repeats=repeats,
+                warmup_runs=warmup_runs,
+                warmup_steps=warmup_steps,
+                steps=steps,
+                seconds=seconds,
+                timeout=timeout,
+                seed=seed,
+                loss_tol=loss_tol,
+                min_effect=min_effect,
+                out_dir=_abs(out_dir, cwd),
+                progress=progress,
+            )
+        )
+        head = {k: res[k] for k in ("headline", "proven", "patch") if k in res}
+        return head | {k: v for k, v in res.items() if k != "machine" and k not in head}
 
     @server.tool()
     def report(run_dir: str = "", cwd: str = ".", out_dir: str = api.DEFAULT_OUT) -> dict:

@@ -76,13 +76,42 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--quiet", action="store_true", help="don't print a progress line to stderr after each run")
     _add_window(p)
 
+    p = sub.add_parser(
+        "fix",
+        help="profile a training command, try the changes train-doctor can apply, and prove the winners",
+        description=(
+            "Profile the command, turn the top findings into candidate changes, measure each with the paired compare, "
+            "keep only the clear winners (and the combination of winners), check the loss stays within tolerance, and "
+            "end with a before/after speedup and a reversible patch. Example: train-doctor fix -- python train.py"
+        ),
+    )
+    _add_window(p)
+    p.add_argument("--budget", type=int, default=4, help="most candidate changes to try, in finding rank order (default 4)")
+    p.add_argument("--keep", action="store_true", help="apply the proven patch to the script (otherwise only write a patch file)")
+    p.add_argument("--install-missing", action="store_true", help="if the command fails on a missing module, install it into the target interpreter's environment and retry")
+    p.add_argument("--repeats", type=int, default=5, help="measured pairs per candidate compare (default 5; a verdict needs at least 4)")
+    p.add_argument("--warmup-runs", type=int, default=1, help="discarded runs per command before measuring (default 1)")
+    p.add_argument("--seed", type=int, default=0, help="seed set in both commands before their own seeding (default 0)")
+    p.add_argument("--loss-tol", type=float, default=0.05, help="allowed relative loss difference, mean and final (default 0.05)")
+    p.add_argument("--min-effect", type=float, default=0.02, help="smallest speed change worth keeping, as a fraction (default 0.02)")
+    p.add_argument("--no-card", action="store_true", help="don't render the result card")
+    p.add_argument("--quiet", action="store_true", help="don't print progress to stderr")
+    p.add_argument("cmd", nargs=argparse.REMAINDER, help="the training command, after --")
+
     p = sub.add_parser("report", help="write report.md and report.json for a run directory")
     p.add_argument("run_dir", nargs="?", help="profile or compare run directory (default: latest)")
     p.add_argument("--out", default=api.DEFAULT_OUT)
     p.add_argument("--json", action="store_true", help="print report.json instead of report.md")
 
-    p = sub.add_parser("setup", help="register the MCP server and skill with Claude Code, Codex and Cursor")
+    p = sub.add_parser(
+        "setup",
+        help="register the MCP server and skill with a coding agent you name",
+        description="Register the train-doctor MCP server and skill. Only edits an agent's config when you name it with --agent; writes a project .mcp.json with --project.",
+    )
     p.add_argument("--yes", action="store_true", help="apply the changes (otherwise only show them)")
+    p.add_argument(
+        "--agent", action="append", choices=["claude", "codex", "cursor"], default=None, help="register with this agent (repeatable); nothing under ~/.claude, ~/.codex or ~/.cursor is touched unless named here"
+    )
     p.add_argument("--project", default=None, help="also write a project .mcp.json in this directory")
     p.add_argument("--command", dest="server_command", default=None, help="server command to register (default: uvx train-doctor mcp)")
 
@@ -139,6 +168,42 @@ def _print_findings(findings: list[dict]) -> None:
         print(f"     evidence: {f['evidence']}")
         print(f"     change: {f['suggestion']}")
         print(f"     expected: {f['expected_effect']}")
+
+
+def _print_fix(res: dict) -> None:
+    print()
+    print(res.get("headline", ""))
+    rows = list(res.get("candidates") or [])
+    if res.get("combined"):
+        rows.append(res["combined"])
+    if rows:
+        print("\ncandidates tried:")
+        for e in rows:
+            ra = e.get("ratio")
+            rs = f"{ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f})" if ra else "n/a"
+            loss = (e.get("loss_check") or {}).get("status", "n/a")
+            print(f"  [{e['decision']}] {e['title']}: {rs}, loss {loss}")
+            print(f"     {e.get('reason')}")
+    if res.get("suggestions"):
+        print("\nsuggested (needs a source change fix does not make on its own):")
+        for s in res["suggestions"]:
+            print(f"  [{s['id']}] {s['title']} (risk {s['risk']})")
+    if res.get("proven"):
+        p = res["proven"]
+        print(f"\nproven change: {p['describe']}")
+        print(f"evidence: {p['compare_dir']}/report.md")
+        pt = res.get("patch") or {}
+        if pt.get("patch_path"):
+            applied = (res.get("applied") or {}).get("applied")
+            print(f"patch: {pt['patch_path']}" + (f" (applied to {res['applied']['target']}, backup {res['applied']['backup']})" if applied else " (apply: git apply <patch>; reverse: git apply -R <patch>)"))
+        elif pt.get("reason"):
+            print(f"patch: not generated ({pt['reason']}); make the edit by hand: {p['describe']}")
+        card = res.get("card") or {}
+        if card.get("png"):
+            print(f"card: {card['png']} and {card['svg']}")
+        elif card.get("svg"):
+            print(f"card: {card['svg']} ({card.get('png_note', 'PNG skipped')})")
+    print(f"\nfix report: {res.get('fix_dir')}/fix.md")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -265,6 +330,38 @@ def _dispatch(args: argparse.Namespace) -> int:
                 print(f"next: {res['next_step']}")
         return 0 if res.get("verdict") != "error" else 1
 
+    if args.command == "fix":
+        from train_doctor import autofix
+
+        cmd = _strip_dashdash(args.cmd)
+        if not cmd:
+            print("train-doctor fix: give the training command after --, for example: train-doctor fix -- python train.py", file=sys.stderr)
+            return 2
+        res = autofix.fix(
+            cmd,
+            budget=args.budget,
+            keep=args.keep,
+            install_missing=args.install_missing,
+            cwd=args.cwd,
+            repeats=args.repeats,
+            warmup_runs=args.warmup_runs,
+            warmup_steps=args.warmup_steps,
+            steps=args.steps,
+            seconds=args.seconds,
+            timeout=args.timeout,
+            seed=args.seed,
+            loss_tol=args.loss_tol,
+            min_effect=args.min_effect,
+            out_dir=args.out,
+            make_card=not args.no_card,
+            progress=None if args.quiet else (lambda msg: print(msg, file=sys.stderr, flush=True)),
+        )
+        if args.json:
+            print(json.dumps(res, indent=2, default=str))
+        else:
+            _print_fix(res)
+        return 0 if res.get("proven") else (1 if res.get("error") else 0)
+
     if args.command == "report":
         res = api.make_report(args.run_dir, args.out)
         print(Path(res["json" if args.json else "markdown"]).read_text())
@@ -273,7 +370,7 @@ def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "setup":
         from train_doctor.setup_agents import run_setup
 
-        return run_setup(apply=args.yes, project=args.project, server_command=args.server_command)
+        return run_setup(apply=args.yes, project=args.project, server_command=args.server_command, agents=args.agent)
 
     if args.command == "mcp":
         from train_doctor.mcp_server import serve

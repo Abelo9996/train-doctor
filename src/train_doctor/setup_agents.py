@@ -121,33 +121,57 @@ def _skill_action(target: str, dest: Path, text: str) -> Action:
     return Action(target, f"{verb} {dest}", lambda: _write(dest, text))
 
 
-def plan(home: Path | None = None, project: str | None = None, server: list[str] | None = None) -> list[Action]:
+AGENTS = ("claude", "codex", "cursor")
+
+
+def plan(home: Path | None = None, project: str | None = None, server: list[str] | None = None, agents: list[str] | None = None) -> list[Action]:
+    """Actions to register the server and skill, only for the agents explicitly asked for.
+
+    ``setup`` never edits ~/.claude, ~/.codex or ~/.cursor unless that agent is named in
+    ``agents`` (``--agent claude`` and so on), so running it does not change an agent's
+    configuration by surprise. ``project`` writes a project-local ``.mcp.json`` and needs
+    no agent.
+    """
     home = home or Path.home()
     server = server or DEFAULT_SERVER
+    agents = list(agents or [])
     actions: list[Action] = []
-    if shutil.which("claude") or (home / ".claude").exists():
+    text = skill_text()
+    if "claude" in agents:
         actions.append(_claude_action(server))
-    if shutil.which("codex") or (home / ".codex").exists():
+        actions.append(_skill_action("Claude Code skill", home / ".claude" / "skills" / NAME / "SKILL.md", text))
+    if "codex" in agents:
         actions.append(_codex_action(home, server))
-    if (home / ".cursor").exists():
+        actions.append(_skill_action("Codex skill", home / ".codex" / "skills" / NAME / "SKILL.md", text))
+    if "cursor" in agents:
         actions.append(_json_server_action("Cursor", home / ".cursor" / "mcp.json", server))
     if project:
         actions.append(_json_server_action("Project", Path(project) / ".mcp.json", server))
-    text = skill_text()
-    if (home / ".claude").exists():
-        actions.append(_skill_action("Claude Code skill", home / ".claude" / "skills" / NAME / "SKILL.md", text))
-    if (home / ".codex").exists():
-        actions.append(_skill_action("Codex skill", home / ".codex" / "skills" / NAME / "SKILL.md", text))
     return actions
 
 
-def run_setup(apply: bool = False, project: str | None = None, server_command: str | None = None, home: Path | None = None) -> int:
+def run_setup(
+    apply: bool = False,
+    project: str | None = None,
+    server_command: str | None = None,
+    home: Path | None = None,
+    agents: list[str] | None = None,
+) -> int:
     import shlex
 
     server = shlex.split(server_command) if server_command else DEFAULT_SERVER
-    actions = plan(home=home, project=project, server=server)
+    bad = [a for a in (agents or []) if a not in AGENTS]
+    if bad:
+        print(f"Unknown agent(s): {', '.join(bad)}. Choose from {', '.join(AGENTS)}.")
+        return 2
+    actions = plan(home=home, project=project, server=server, agents=agents)
     if not actions:
-        print("No Claude Code, Codex or Cursor installation found. Use --project DIR to write a project .mcp.json.")
+        print(
+            "Nothing selected. setup does not touch ~/.claude, ~/.codex or ~/.cursor unless you ask.\n"
+            "Register with a coding agent using --agent claude|codex|cursor (repeatable),\n"
+            "and/or write a project-local config with --project DIR. For example:\n"
+            "  train-doctor setup --agent claude"
+        )
         return 0
     print("train-doctor setup plan:")
     for a in actions:
