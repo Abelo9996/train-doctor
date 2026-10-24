@@ -85,6 +85,7 @@ def render_card(label: str, compare_result: dict, machine: dict, argv: list[str]
         png_path.write_bytes(bytes(png))
         out["png"] = str(png_path)
     except ImportError:
+        # resvg-py is a normal dependency; this only happens on a broken install
         out["png"] = None
-        out["png_note"] = "install the card renderer for PNG output: pip install 'train-doctor[card]' (or uvx --with resvg-py)"
+        out["png_note"] = "resvg-py (a dependency) is not importable, so the PNG was skipped; the SVG is written. Reinstall train-doctor."
     return out

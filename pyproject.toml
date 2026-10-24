@@ -22,10 +22,8 @@ classifiers = [
 dependencies = [
     "mcp>=1.30",
     "psutil>=5.9",
+    "resvg-py>=0.5",
 ]
-
-[project.optional-dependencies]
-card = ["resvg-py>=0.5"]
 
 [project.urls]
 Homepage = "https://github.com/Abelo9996/train-doctor"
