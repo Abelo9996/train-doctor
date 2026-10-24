@@ -33,16 +33,33 @@ and safe:
 | DataLoader `num_workers` | yes | Loss-neutral: with `persistent_workers=False` the shuffle RNG advances as single-process. |
 | `pin_memory`, cuDNN autotuning | yes, on CUDA | NVIDIA paths are untested on the author's hardware (Apple M4 / MPS and CPU). |
 | `persistent_workers` | suggested | Avoids re-spawning workers per epoch but changes the per-epoch shuffle order. |
-| device move, mixed precision, `torch.compile`, batch size, removing per-step `.item()`/sync points | suggested | Need a source change `fix` will not make blindly; it reports them with evidence so you can decide. |
+| mixed precision, `torch.compile`, device move, removing per-step `.item()`/sync points | suggested, or with `--agent` | Need a source change. `fix --agent claude` (or `codex`) asks that agent CLI to make one at a time and proves each with a compare; batch size is left as a suggestion because it changes the effective training. |
 
 Everything `fix` applies is also written as a reversible unified diff against your script (applied with
 `--keep`, otherwise left as a patch file).
 
-## `fix` on a real script
+With `fix --agent claude` the agent makes the source-edit changes above, one at a time, in a scratch copy;
+each is kept only if `compare` finds it faster with the loss within tolerance, and reverted otherwise. It
+prints the plan and a cost estimate first and spends nothing without `--yes`.
 
-A real run from this repo: [examples/fix_targets/mnist_cnn](examples/fix_targets/mnist_cnn), a small
-MNIST-style CNN whose dataset generates and blurs each image in `__getitem__` with `num_workers=0`. Apple
-M4 (10 cores, 16 GB), torch 2.14.1 on MPS.
+## `fix` on real scripts
+
+Two sets of runs, all on an Apple M4 (10 cores, 16 GB), torch 2.14.1.
+
+**Unmodified third-party scripts** ([pytorch/examples](https://github.com/pytorch/examples), the honest
+test, written with no knowledge of this tool; full reports in
+[examples/external_fix_targets](examples/external_fix_targets)):
+
+- `mnist_rnn/main.py` (GRU, runs on CPU by default with `num_workers=0`): plain `fix` proved
+  `num_workers=5` at **1.30x** (95% interval 1.18 to 1.90, 5 of 5 pairs), **loss identical**, and wrote the
+  one-line patch and card. No agent needed.
+- `mnist/main.py` (CNN on MPS, already uses workers + pin_memory): plain `fix` had only suggestions.
+  `fix --agent claude --yes` then had the agent add `torch.compile` (1.22x) and autocast float16 (1.32x);
+  both were faster and both were **reverted by the loss check** (each moved the loss past the 5% tolerance),
+  so `fix` reported no proven loss-preserving win. The compare and loss check are the guardrail.
+
+**A synthetic script written for this project** ([examples/fix_targets/mnist_cnn](examples/fix_targets/mnist_cnn)),
+a small MNIST-style CNN whose dataset generates and blurs each image in `__getitem__` with `num_workers=0`:
 
 ![train-doctor fix on examples/fix_targets/mnist_cnn: 2.16x faster, loss unchanged](https://raw.githubusercontent.com/Abelo9996/train-doctor/main/examples/fix_targets/mnist_cnn/mnist_cnn.card.png)
 
@@ -66,8 +83,8 @@ card: mnist_cnn.card.png and mnist_cnn.card.svg
 The proof is a paired comparison: five times it ran the unchanged command and the same command with the
 workers injected, back to back, and the candidate won every pair with the loss byte-for-byte identical.
 The patch it wrote changes one line (`num_workers=args.num_workers` -> `num_workers=5`). On two other
-scripts in [examples/fix_targets](examples/fix_targets) (a char-level LSTM on CPU, a compute-bound tabular
-MLP) `fix` found no change it could apply on its own and said "no proven win", with the real findings
+synthetic scripts in [examples/fix_targets](examples/fix_targets) (a char-level LSTM on CPU, a compute-bound
+tabular MLP) `fix` found no change it could apply on its own and said "no proven win", with the real findings
 listed as suggestions, instead of reporting a comparison it would have to call inconclusive.
 
 ## Example output

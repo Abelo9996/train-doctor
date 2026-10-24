@@ -10,6 +10,15 @@ One command takes a slow training run to a proven speedup: `train-doctor fix -- 
   "before -> after, Nx faster, loss unchanged", a reversible patch, and a result card. When nothing
   clears the bar it says "no proven win" and lists what it tried and why each lost. New `fix` MCP tool
   and `train-doctor fix` CLI command.
+- `fix --agent claude` (or `codex`) goes further on scripts where the remaining wins need a source edit:
+  it asks the named agent CLI to make one such change at a time (mixed precision, torch.compile, a
+  device move, removing per-step syncs) in a scratch copy of the script, proves each with `compare` and
+  the loss check, keeps only the winners, and writes the combined reversible patch (applied with
+  `--keep`). The compare and loss check are the guardrail; a change that does not clear the speed
+  threshold or moves the loss past tolerance is reverted. It prints the plan and a cost estimate first
+  and spends nothing without `--yes`. This is for real third-party scripts whose data loader is already
+  configured, where plain `fix` would only have a suggestion.
+- resvg-py is now a normal dependency (not an extra), so the result card PNG always renders.
 - Candidates are applied by injecting settings into the candidate run, not by editing the user's
   source, so the same unchanged command is the baseline and the candidate and only the injected setting
   differs. Applied automatically: DataLoader `num_workers` (loss-neutral: with the default

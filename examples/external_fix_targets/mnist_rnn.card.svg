@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="Helvetica, Arial, sans-serif">
+<rect width="1200" height="630" fill="#0f172a"/>
+<text x="80" y="110" fill="#94a3b8" font-size="30">train-doctor</text>
+<text x="80" y="200" fill="#f8fafc" font-size="76" font-weight="700">mnist_rnn</text>
+<text x="80" y="285" fill="#34d399" font-size="104" font-weight="800">1.30x faster</text>
+<rect x="80" y="340" width="760" height="46" rx="8" fill="#1e293b"/>
+<rect x="80" y="340" width="584" height="46" rx="8" fill="#94a3b8"/>
+<text x="860" y="373" fill="#94a3b8" font-size="30">before 10,365 samples/s</text>
+<rect x="80" y="404" width="760" height="46" rx="8" fill="#1e293b"/>
+<rect x="80" y="404" width="760" height="46" rx="8" fill="#34d399"/>
+<text x="860" y="437" fill="#f8fafc" font-size="30">after 13,489 samples/s</text>
+<text x="80" y="512" fill="#f8fafc" font-size="34">loss unchanged  ·  Apple GPU (MPS)</text>
+<rect x="80" y="545" width="1040" height="56" rx="10" fill="#1e293b"/>
+<text x="104" y="582" fill="#94a3b8" font-size="27" font-family="monospace">check yours: uvx train-doctor fix -- python main.py</text>
+</svg>

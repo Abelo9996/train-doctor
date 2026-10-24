@@ -37,6 +37,15 @@ and lists what it tried. Report the headline and the evidence path; apply the
 patch only if the user wants it. When you need to understand or change something
 `fix` will not do on its own, drop to the step-by-step workflow below.
 
+On many real scripts the data loader is already configured and the remaining
+wins (mixed precision, `torch.compile`, a device move, removing per-step syncs)
+need a source edit. `fix --agent claude` (or `codex`) asks that agent CLI to make
+one such change at a time in a scratch copy and proves each with `compare` plus
+the loss check, keeping only the winners and writing a combined patch. It prints
+the plan and a cost estimate first and spends nothing without `--yes`. The
+compare and loss check are the guardrail: an edit that does not clear the speed
+threshold, or moves the loss past tolerance, is reverted.
+
 ## Step-by-step workflow
 
 1. **Profile the unchanged command.** Use the exact command the user runs,

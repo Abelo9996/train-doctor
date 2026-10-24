@@ -1,8 +1,10 @@
 # fix targets
 
-Three small real training scripts `train-doctor fix` was validated on, and what it found. None of them
-has anything to do with train-doctor; each is a plain PyTorch script with a realistic slow spot (or no
-spot `fix` can address on its own). Reproduce with [run_validation.sh](run_validation.sh):
+Two sets of scripts `train-doctor fix` was validated on. The three here are **synthetic**: small plain
+PyTorch scripts written for this project, each with a realistic slow spot (or none `fix` can address on
+its own). The **external** validation on unmodified third-party scripts (pytorch/examples) is in
+[../external_fix_targets](../external_fix_targets) and is the better test, because those scripts were
+written with no knowledge of this tool. Reproduce the synthetic set with [run_validation.sh](run_validation.sh):
 
 ```bash
 PATH="$PWD/.venv/bin:$PATH" sh examples/fix_targets/run_validation.sh
