@@ -113,6 +113,65 @@ def test_fix_no_winner_is_honest(monkeypatch, tmp_path):
     assert "card" not in out
 
 
+def test_agent_candidates_from_findings():
+    ev = {"config": {"device": "mps"}}
+    findings = [
+        _finding("no_mixed_precision", risk="medium"),
+        _finding("no_torch_compile"),
+        _finding("host_sync_in_loop", risk="none"),
+        _finding("cpu_with_accelerator_available", numbers={"available": "mps"}),
+    ]
+    cands = autofix.agent_candidates_from_findings(ev, findings, limit=5)
+    ids = [c.id for c in cands]
+    # same-math changes first, numerics-changing ones last
+    assert ids == ["remove_sync", "torch_compile", "amp", "device_move"]
+    byid = {c.id: c for c in cands}
+    assert "autocast(device_type='mps', dtype=torch.float16)" in byid["amp"].instruction
+    assert "torch.compile(model)" in byid["torch_compile"].instruction
+    assert "mps" in byid["device_move"].instruction
+
+
+def test_fix_plan_mode_spends_nothing(monkeypatch, tmp_path):
+    script = _script(tmp_path)
+    findings = [_finding("no_mixed_precision", risk="medium"), _finding("no_torch_compile")]
+
+    def boom(*a, **k):
+        raise AssertionError("must not run compare or the agent in plan mode")
+
+    monkeypatch.setattr(autofix.agentdrv, "edit_file", boom)
+    _patch_api(monkeypatch, tmp_path, findings, boom)
+    out = autofix.fix(["python", str(script)], out_dir=str(tmp_path / "out"), agent="claude", yes=False, make_card=False, cwd=str(tmp_path))
+    assert out["mode"] == "plan"
+    assert out["proven"] is None
+    assert [a["id"] for a in out["agent_plan"]["agent_candidates"]] == ["torch_compile", "amp"]
+    assert "plan only" in out["headline"] and "Cost" in out["cost_note"]
+
+
+def test_fix_agent_stack_keeps_proven_source_edit(monkeypatch, tmp_path):
+    script = _script(tmp_path)
+    original = script.read_text()
+    findings = [_finding("no_torch_compile")]
+
+    def fake_edit(agent, scratch, instruction, cwd, timeout=300.0):
+        from pathlib import Path as _P
+
+        p = _P(scratch)
+        p.write_text(p.read_text() + "\n# compiled\nmodel = None\n")
+        return {"ok": True, "changed": True, "valid": True, "returncode": 0}
+
+    monkeypatch.setattr(autofix.agentdrv, "edit_file", fake_edit)
+    # every compare (agent candidate and the final confirm) comes back as a keep
+    _patch_api(monkeypatch, tmp_path, findings, lambda b, c, **kw: _compare_result(kw.get("candidate_env"), 1.6))
+    out = autofix.fix(["python", str(script)], out_dir=str(tmp_path / "out"), agent="claude", yes=True, make_card=True, cwd=str(tmp_path))
+    assert out["agent"] == "claude"
+    assert out["proven"] and out["proven"]["candidate"] == "combined"
+    assert "1.60x faster" in out["headline"]
+    assert out["patch"]["patch_path"] and "# compiled" in Path(out["patch"]["patch_path"]).read_text()
+    # scratch files are cleaned up; the original script is untouched without --keep
+    assert script.read_text() == original
+    assert not list(tmp_path.glob("*.td-*.py"))
+
+
 def test_fix_keep_applies_patch(monkeypatch, tmp_path):
     script = _script(tmp_path)
     original = script.read_text()

@@ -94,6 +94,38 @@ def _apply_import_line(text: str, line: str) -> tuple[str, str | None]:
     return "".join(lines), None
 
 
+def apply_edits_to_text(text: str, edits: list[dict]) -> tuple[str, list[str]]:
+    """Apply the structured ``edits`` to source ``text`` in order. Returns ``(text, notes)``."""
+    notes: list[str] = []
+    for e in edits:
+        if e["kind"] == "dataloader_kwargs":
+            text, err = _apply_dataloader_kwargs(text, e["kwargs"])
+        elif e["kind"] == "line_after_import_torch":
+            text, err = _apply_import_line(text, e["line"])
+            if err == "already present":
+                err = None
+        else:
+            err = f"unknown edit kind {e['kind']}"
+        if err:
+            notes.append(err)
+    return text, notes
+
+
+def diff_text(target: Path, original_text: str, new_text: str, out_dir: Path) -> dict:
+    """Write a reversible unified diff from ``original_text`` to ``new_text`` for ``target``."""
+    target = Path(target)
+    if new_text == original_text:
+        return {"patch_path": None, "reason": "nothing to change", "target": str(target)}
+    rel = target.name
+    diff = "".join(
+        difflib.unified_diff(original_text.splitlines(keepends=True), new_text.splitlines(keepends=True), fromfile=f"a/{rel}", tofile=f"b/{rel}")
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    patch_path = out_dir / f"{target.stem}.fix.patch"
+    patch_path.write_text(diff)
+    return {"patch_path": str(patch_path), "target": str(target), "_new_text": new_text}
+
+
 def make_patch(argv: list[str], cwd: str, edits: list[dict], out_dir: Path) -> dict:
     """Produce a reversible unified diff for ``edits`` against the command's script.
 

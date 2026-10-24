@@ -89,6 +89,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--budget", type=int, default=4, help="most candidate changes to try, in finding rank order (default 4)")
     p.add_argument("--keep", action="store_true", help="apply the proven patch to the script (otherwise only write a patch file)")
     p.add_argument("--install-missing", action="store_true", help="if the command fails on a missing module, install it into the target interpreter's environment and retry")
+    p.add_argument("--agent", choices=["claude", "codex"], default=None, help="also ask this agent CLI to make the source-edit changes (mixed precision, torch.compile, device move, removing syncs), one at a time, each proven with a compare")
+    p.add_argument("--yes", action="store_true", help="with --agent, actually spend: run the agent sessions (without it, only the plan and cost are printed)")
     p.add_argument("--repeats", type=int, default=5, help="measured pairs per candidate compare (default 5; a verdict needs at least 4)")
     p.add_argument("--warmup-runs", type=int, default=1, help="discarded runs per command before measuring (default 1)")
     p.add_argument("--seed", type=int, default=0, help="seed set in both commands before their own seeding (default 0)")
@@ -170,20 +172,47 @@ def _print_findings(findings: list[dict]) -> None:
         print(f"     expected: {f['expected_effect']}")
 
 
+def _print_candidate_rows(rows: list, header: str) -> None:
+    if not rows:
+        return
+    print(f"\n{header}:")
+    for e in rows:
+        ra = e.get("ratio")
+        rs = f"{ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f})" if ra else "n/a"
+        loss = (e.get("loss_check") or {}).get("status", "n/a")
+        print(f"  [{e.get('decision')}] {e['title']}: {rs}, loss {loss}")
+        if e.get("reason"):
+            print(f"     {e.get('reason')}")
+
+
 def _print_fix(res: dict) -> None:
     print()
     print(res.get("headline", ""))
+    if res.get("mode") == "plan":
+        print(res.get("cost_note", ""))
+        plan = res.get("agent_plan") or {}
+        if plan.get("injection_candidates"):
+            print("\nwould inject (no agent):")
+            for c in plan["injection_candidates"]:
+                print(f"  - {c['describe']}")
+        print(f"\nwould ask {res.get('agent')} to make, one at a time:")
+        for a in plan.get("agent_candidates") or []:
+            print(f"  - [{a['id']}] {a['title']} (risk {a['risk']})")
+        if not plan.get("agent_candidates"):
+            print("  (none)")
+        print("\nre-run with --yes to spend.")
+        print(f"\nfix report: {res.get('fix_dir')}/fix.md")
+        return
     rows = list(res.get("candidates") or [])
     if res.get("combined"):
         rows.append(res["combined"])
-    if rows:
-        print("\ncandidates tried:")
-        for e in rows:
-            ra = e.get("ratio")
-            rs = f"{ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f})" if ra else "n/a"
-            loss = (e.get("loss_check") or {}).get("status", "n/a")
-            print(f"  [{e['decision']}] {e['title']}: {rs}, loss {loss}")
-            print(f"     {e.get('reason')}")
+    _print_candidate_rows(rows, "injected candidates tried")
+    if res.get("agent"):
+        _print_candidate_rows(res.get("agent_results") or [], f"source changes by {res['agent']}")
+        cc = res.get("combined_confirm")
+        if cc and cc.get("ratio"):
+            ra = cc["ratio"]
+            print(f"  combined vs original: {cc['decision']}, {ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f})")
     if res.get("suggestions"):
         print("\nsuggested (needs a source change fix does not make on its own):")
         for s in res["suggestions"]:
@@ -342,6 +371,8 @@ def _dispatch(args: argparse.Namespace) -> int:
             budget=args.budget,
             keep=args.keep,
             install_missing=args.install_missing,
+            agent=args.agent,
+            yes=args.yes,
             cwd=args.cwd,
             repeats=args.repeats,
             warmup_runs=args.warmup_runs,

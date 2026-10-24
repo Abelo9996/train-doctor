@@ -202,6 +202,8 @@ def build_server():
         cwd: str = ".",
         budget: int = 4,
         keep: bool = False,
+        agent: str = "",
+        yes: bool = False,
         repeats: int = 5,
         warmup_runs: int = 1,
         warmup_steps: int = 5,
@@ -224,6 +226,11 @@ def build_server():
         it tried with each decision and why, and `suggestions` for findings that need a source change it will not make on
         its own. If nothing is proven, `headline` says "no proven win" and lists what was tried. Sends a progress
         notification as it works. Takes a few minutes: one compare per candidate.
+
+        Set `agent` to "claude" or "codex" to also drive that agent CLI to make the source-edit changes (mixed
+        precision, torch.compile, device move, removing syncs), one at a time in a scratch copy, each proven with a
+        compare and reverted if it does not clear the threshold or moves the loss; without `yes=True` this returns
+        only the plan and a cost estimate and spends nothing.
         """
         total = max(1, budget) + 1
 
@@ -239,6 +246,8 @@ def build_server():
                 command,
                 budget=budget,
                 keep=keep,
+                agent=agent or None,
+                yes=yes,
                 cwd=cwd,
                 repeats=repeats,
                 warmup_runs=warmup_runs,
