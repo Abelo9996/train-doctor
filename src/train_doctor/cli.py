@@ -88,9 +88,22 @@ def build_parser() -> argparse.ArgumentParser:
     _add_window(p)
     p.add_argument("--budget", type=int, default=4, help="most candidate changes to try, in finding rank order (default 4)")
     p.add_argument("--keep", action="store_true", help="apply the proven patch to the script (otherwise only write a patch file)")
-    p.add_argument("--install-missing", action="store_true", help="if the command fails on a missing module, install it into the target interpreter's environment and retry")
-    p.add_argument("--agent", choices=["claude", "codex"], default=None, help="also ask this agent CLI to make the source-edit changes (mixed precision, torch.compile, device move, removing syncs), one at a time, each proven with a compare")
-    p.add_argument("--yes", action="store_true", help="with --agent, actually spend: run the agent sessions (without it, only the plan and cost are printed)")
+    p.add_argument(
+        "--install-missing",
+        action="store_true",
+        help="if the command fails on a missing module, install it into the target interpreter's environment and retry",
+    )
+    p.add_argument(
+        "--agent",
+        choices=["claude", "codex"],
+        default=None,
+        help="also ask this agent CLI to make the source-edit changes (mixed precision, torch.compile, device move, removing syncs), one at a time, each proven with a compare",
+    )
+    p.add_argument(
+        "--yes",
+        action="store_true",
+        help="with --agent, actually spend: run the agent sessions (without it, only the plan and cost are printed)",
+    )
     p.add_argument("--repeats", type=int, default=5, help="measured pairs per candidate compare (default 5; a verdict needs at least 4)")
     p.add_argument("--warmup-runs", type=int, default=1, help="discarded runs per command before measuring (default 1)")
     p.add_argument("--seed", type=int, default=0, help="seed set in both commands before their own seeding (default 0)")
@@ -112,7 +125,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--yes", action="store_true", help="apply the changes (otherwise only show them)")
     p.add_argument(
-        "--agent", action="append", choices=["claude", "codex", "cursor"], default=None, help="register with this agent (repeatable); nothing under ~/.claude, ~/.codex or ~/.cursor is touched unless named here"
+        "--agent",
+        action="append",
+        choices=["claude", "codex", "cursor"],
+        default=None,
+        help="register with this agent (repeatable); nothing under ~/.claude, ~/.codex or ~/.cursor is touched unless named here",
     )
     p.add_argument("--project", default=None, help="also write a project .mcp.json in this directory")
     p.add_argument("--command", dest="server_command", default=None, help="server command to register (default: uvx train-doctor mcp)")
@@ -224,7 +241,14 @@ def _print_fix(res: dict) -> None:
         pt = res.get("patch") or {}
         if pt.get("patch_path"):
             applied = (res.get("applied") or {}).get("applied")
-            print(f"patch: {pt['patch_path']}" + (f" (applied to {res['applied']['target']}, backup {res['applied']['backup']})" if applied else " (apply: git apply <patch>; reverse: git apply -R <patch>)"))
+            print(
+                f"patch: {pt['patch_path']}"
+                + (
+                    f" (applied to {res['applied']['target']}, backup {res['applied']['backup']})"
+                    if applied
+                    else " (apply: git apply <patch>; reverse: git apply -R <patch>)"
+                )
+            )
         elif pt.get("reason"):
             print(f"patch: not generated ({pt['reason']}); make the edit by hand: {p['describe']}")
         card = res.get("card") or {}

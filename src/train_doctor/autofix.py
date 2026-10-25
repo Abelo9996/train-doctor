@@ -135,7 +135,13 @@ def candidates_from_findings(ev: dict, findings: list[dict], budget: int) -> tup
             )
         else:
             suggestions.append(
-                {"id": fid, "title": f["title"], "suggestion": f["suggestion"], "risk": f["risk"], "reason": "needs a source change fix does not make on its own"}
+                {
+                    "id": fid,
+                    "title": f["title"],
+                    "suggestion": f["suggestion"],
+                    "risk": f["risk"],
+                    "reason": "needs a source change fix does not make on its own",
+                }
             )
         seen_ids.add(fid)
     return cands[:budget], suggestions
@@ -266,11 +272,31 @@ def fix(
     label = _label_for(argv, cwd)
 
     def do_profile() -> dict:
-        return api.profile(argv, cwd=cwd, warmup_steps=warmup_steps, steps=steps, seconds=seconds, timeout=timeout, profiler_steps=0, out_dir=out_dir, label=f"{label}-fix-profile")
+        return api.profile(
+            argv,
+            cwd=cwd,
+            warmup_steps=warmup_steps,
+            steps=steps,
+            seconds=seconds,
+            timeout=timeout,
+            profiler_steps=0,
+            out_dir=out_dir,
+            label=f"{label}-fix-profile",
+        )
 
     say(f"Profiling {shlex.join(argv)}")
     prof = do_profile()
-    out: dict = {"kind": "fix", "label": label, "command": argv, "cwd": cwd, "profile_dir": prof["run_dir"], "candidates": [], "suggestions": [], "proven": None, "machine": prof["evidence"].get("machine", {})}
+    out: dict = {
+        "kind": "fix",
+        "label": label,
+        "command": argv,
+        "cwd": cwd,
+        "profile_dir": prof["run_dir"],
+        "candidates": [],
+        "suggestions": [],
+        "proven": None,
+        "machine": prof["evidence"].get("machine", {}),
+    }
     if interp_note:
         out["interpreter_note"] = interp_note
     if prof.get("error"):
@@ -285,9 +311,10 @@ def fix(
         if prof.get("error"):
             out["error"] = prof["error"]
             fixcmd = f"{argv[0]} -m pip install {missing}" if missing else None
-            out["headline"] = (
-                f"{label}: could not profile the command. {prof['error'].get('hint')}"
-                + (f" To let fix install it, re-run with --install-missing (it would run `{fixcmd}`)." if missing and not install_missing else "")
+            out["headline"] = f"{label}: could not profile the command. {prof['error'].get('hint')}" + (
+                f" To let fix install it, re-run with --install-missing (it would run `{fixcmd}`)."
+                if missing and not install_missing
+                else ""
             )
             _write(out_dir, out, label)
             return out
@@ -296,8 +323,18 @@ def fix(
     cands, suggestions = candidates_from_findings(prof["evidence"], findings, budget)
     out["suggestions"] = suggestions
     agent_cands = agent_candidates_from_findings(prof["evidence"], findings, limit=budget) if agent else []
-    cmp = dict(repeats=repeats, warmup_runs=warmup_runs, warmup_steps=warmup_steps, steps=steps, seconds=seconds,
-               timeout=timeout, seed=seed, loss_tol=loss_tol, min_effect=min_effect, out_dir=out_dir)
+    cmp = dict(
+        repeats=repeats,
+        warmup_runs=warmup_runs,
+        warmup_steps=warmup_steps,
+        steps=steps,
+        seconds=seconds,
+        timeout=timeout,
+        seed=seed,
+        loss_tol=loss_tol,
+        min_effect=min_effect,
+        out_dir=out_dir,
+    )
     prog = (lambda d, t, m: say("  " + m)) if progress else None
 
     # plan-only: --agent without --yes prints what it would do and spends nothing
@@ -306,7 +343,10 @@ def fix(
         out["agent"] = agent
         out["agent_plan"] = {
             "injection_candidates": [{"id": c.id, "describe": c.describe} for c in cands],
-            "agent_candidates": [{"id": a.id, "title": a.title, "from_finding": a.from_finding, "risk": a.risk, "instruction": a.instruction} for a in agent_cands],
+            "agent_candidates": [
+                {"id": a.id, "title": a.title, "from_finding": a.from_finding, "risk": a.risk, "instruction": a.instruction}
+                for a in agent_cands
+            ],
         }
         n = len(agent_cands)
         out["headline"] = (
@@ -346,7 +386,15 @@ def fix(
             env.update(c.env)
         say("Trying the winners together")
         res = api.compare(argv, argv, cwd=cwd, candidate_env=env, label=f"{label}-fix-combined", progress=prog, **cmp)
-        combo = Candidate(id="combined", title="all winners together", from_finding="+".join(c.id for c, _ in winners), env=env, edits=[e for c, _ in winners for e in c.edits], risk="low", describe=", ".join(c.describe for c, _ in winners))
+        combo = Candidate(
+            id="combined",
+            title="all winners together",
+            from_finding="+".join(c.id for c, _ in winners),
+            env=env,
+            edits=[e for c, _ in winners for e in c.edits],
+            risk="low",
+            describe=", ".join(c.describe for c, _ in winners),
+        )
         entry = _result_entry(combo, res)
         entry["combined_of"] = [c.id for c, _ in winners]
         out["combined"] = entry
@@ -407,17 +455,29 @@ def _run_agent_stack(argv, cwd, label, agent, agent_cands, inj_edits, say, cmp, 
         shutil.copyfile(base_path, trial_path)
         say(f"Asking {agent} to apply: {ac.title}")
         ed = agentdrv.edit_file(agent, trial_path, ac.instruction, cwd, agent_timeout)
-        entry = {"candidate": ac.id, "title": ac.title, "from_finding": ac.from_finding, "instruction": ac.instruction, "agent": {k: ed.get(k) for k in ("ok", "changed", "error", "returncode")}}
+        entry = {
+            "candidate": ac.id,
+            "title": ac.title,
+            "from_finding": ac.from_finding,
+            "instruction": ac.instruction,
+            "agent": {k: ed.get(k) for k in ("ok", "changed", "error", "returncode")},
+        }
         if not ed.get("changed"):
             entry["decision"] = "skipped"
             entry["reason"] = ed.get("error") or "the agent made no change"
             results.append(entry)
             say(f"  {ac.title}: skipped ({entry['reason']})")
             continue
-        res = api.compare(_swap_script(argv, base_path), _swap_script(argv, trial_path), cwd=cwd, label=f"{label}-agent-{ac.id}", progress=prog, **cmp)
+        res = api.compare(
+            _swap_script(argv, base_path), _swap_script(argv, trial_path), cwd=cwd, label=f"{label}-agent-{ac.id}", progress=prog, **cmp
+        )
         entry.update(
-            decision=res.get("decision"), verdict=res.get("verdict"), reason=res.get("reason"), ratio=res.get("ratio"),
-            loss_check={k: (res.get("loss_check") or {}).get(k) for k in ("status", "mean_rel_diff", "final_rel_diff")}, compare_dir=res.get("root"),
+            decision=res.get("decision"),
+            verdict=res.get("verdict"),
+            reason=res.get("reason"),
+            ratio=res.get("ratio"),
+            loss_check={k: (res.get("loss_check") or {}).get(k) for k in ("status", "mean_rel_diff", "final_rel_diff")},
+            compare_dir=res.get("root"),
         )
         results.append(entry)
         if res.get("decision") == "keep":
@@ -427,18 +487,38 @@ def _run_agent_stack(argv, cwd, label, agent, agent_cands, inj_edits, say, cmp, 
         else:
             say(f"  {ac.title}: {res.get('decision')} (reverted)")
     trial_path.unlink(missing_ok=True)
-    return {"results": results, "winners": winners, "base_path": base_path, "script": script, "original_text": original_text, "final_text": base_path.read_text()}
+    return {
+        "results": results,
+        "winners": winners,
+        "base_path": base_path,
+        "script": script,
+        "original_text": original_text,
+        "final_text": base_path.read_text(),
+    }
 
 
 def _finalize(out, argv, cwd, label, inj_best, agent_out, keep, make_card, out_dir, say, cmp, prog) -> None:
     """Pick the proven result (agent-combined, else injected best, else none) and write patch and card."""
     machine = out["machine"]
-    changed = bool(agent_out) and not agent_out.get("error") and agent_out.get("final_text") and agent_out["final_text"] != agent_out["original_text"]
+    changed = (
+        bool(agent_out)
+        and not agent_out.get("error")
+        and agent_out.get("final_text")
+        and agent_out["final_text"] != agent_out["original_text"]
+    )
     confirmed = None
     if changed:
         say("Confirming the combined change against the original")
-        res = api.compare(argv, _swap_script(argv, agent_out["base_path"]), cwd=cwd, label=f"{label}-combined-confirm", progress=prog, **cmp)
-        out["combined_confirm"] = {"decision": res.get("decision"), "reason": res.get("reason"), "ratio": res.get("ratio"), "loss_check": {k: (res.get("loss_check") or {}).get(k) for k in ("status", "mean_rel_diff", "final_rel_diff")}, "compare_dir": res.get("root")}
+        res = api.compare(
+            argv, _swap_script(argv, agent_out["base_path"]), cwd=cwd, label=f"{label}-combined-confirm", progress=prog, **cmp
+        )
+        out["combined_confirm"] = {
+            "decision": res.get("decision"),
+            "reason": res.get("reason"),
+            "ratio": res.get("ratio"),
+            "loss_check": {k: (res.get("loss_check") or {}).get(k) for k in ("status", "mean_rel_diff", "final_rel_diff")},
+            "compare_dir": res.get("root"),
+        }
         if res.get("decision") == "keep":
             confirmed = res
 
@@ -450,7 +530,13 @@ def _finalize(out, argv, cwd, label, inj_best, agent_out, keep, make_card, out_d
     if confirmed:
         inj_desc = inj_best[0].describe if inj_best else ""
         describe = ", ".join(x for x in (inj_desc, describe_agent) if x)
-        out["proven"] = {"candidate": "combined", "describe": describe, "compare_dir": confirmed["root"], "ratio": confirmed["ratio"], "loss_check": confirmed.get("loss_check")}
+        out["proven"] = {
+            "candidate": "combined",
+            "describe": describe,
+            "compare_dir": confirmed["root"],
+            "ratio": confirmed["ratio"],
+            "loss_check": confirmed.get("loss_check"),
+        }
         out["headline"] = _headline(label, confirmed, machine)
         patch = patcher.diff_text(agent_out["script"], agent_out["original_text"], agent_out["final_text"], Path(out_dir))
         out["patch"] = patch
@@ -461,7 +547,13 @@ def _finalize(out, argv, cwd, label, inj_best, agent_out, keep, make_card, out_d
 
     if inj_best:
         best_c, best_r = inj_best
-        out["proven"] = {"candidate": best_c.id, "describe": best_c.describe, "compare_dir": best_r["root"], "ratio": best_r["ratio"], "loss_check": best_r.get("loss_check")}
+        out["proven"] = {
+            "candidate": best_c.id,
+            "describe": best_c.describe,
+            "compare_dir": best_r["root"],
+            "ratio": best_r["ratio"],
+            "loss_check": best_r.get("loss_check"),
+        }
         out["headline"] = _headline(label, best_r, machine)
         patch = patcher.make_patch(argv, cwd, best_c.edits, Path(out_dir))
         out["patch"] = patch
@@ -558,7 +650,14 @@ def render_fix_md(out: dict) -> str:
         if out.get("patch"):
             pt = out["patch"]
             if pt.get("patch_path"):
-                L.append(f"- Patch: `{pt['patch_path']}`" + (f" (applied to `{pt.get('target')}`)" if out.get("applied", {}).get("applied") else " (apply with `git apply` or `patch -p0`; reverse with `-R`)"))
+                L.append(
+                    f"- Patch: `{pt['patch_path']}`"
+                    + (
+                        f" (applied to `{pt.get('target')}`)"
+                        if out.get("applied", {}).get("applied")
+                        else " (apply with `git apply` or `patch -p0`; reverse with `-R`)"
+                    )
+                )
             else:
                 L.append(f"- Patch: not generated automatically ({pt.get('reason')}). Make this edit by hand: {p['describe']}.")
         L.append("")
@@ -583,7 +682,9 @@ def render_fix_md(out: dict) -> str:
         cc = out.get("combined_confirm")
         if cc and cc.get("ratio"):
             ra = cc["ratio"]
-            L.append(f"\nCombined vs original: {cc['decision']}, {ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f}), loss {(cc.get('loss_check') or {}).get('status')}.")
+            L.append(
+                f"\nCombined vs original: {cc['decision']}, {ra['point']:.2f}x ({ra['low']:.2f} to {ra['high']:.2f}), loss {(cc.get('loss_check') or {}).get('status')}."
+            )
         L.append("")
 
     if out.get("suggestions"):

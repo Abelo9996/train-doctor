@@ -42,7 +42,9 @@ def edit_file(agent: str, scratch: Path, instruction: str, cwd: str, timeout: fl
     """Ask ``agent`` to make one edit to ``scratch`` (a file inside ``cwd``). Returns what happened."""
     before = scratch.read_text()
     try:
-        out = subprocess.run(_cmd(agent, _prompt(scratch.name, instruction)), cwd=cwd, capture_output=True, text=True, timeout=timeout, check=False)
+        out = subprocess.run(
+            _cmd(agent, _prompt(scratch.name, instruction)), cwd=cwd, capture_output=True, text=True, timeout=timeout, check=False
+        )
     except subprocess.TimeoutExpired:
         return {"ok": False, "changed": False, "error": f"the agent did not finish within {timeout:.0f}s"}
     except OSError as e:

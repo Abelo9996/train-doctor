@@ -41,7 +41,9 @@ def test_dataloader_kwargs_override_and_append(tmp_path):
 
 def test_cudnn_line_after_import(tmp_path):
     p = _write(tmp_path)
-    info = patcher.make_patch(["python", str(p)], ".", [{"kind": "line_after_import_torch", "line": "torch.backends.cudnn.benchmark = True"}], tmp_path / "out")
+    info = patcher.make_patch(
+        ["python", str(p)], ".", [{"kind": "line_after_import_torch", "line": "torch.backends.cudnn.benchmark = True"}], tmp_path / "out"
+    )
     assert info["patch_path"]
     assert "torch.backends.cudnn.benchmark = True" in info["_new_text"]
     ast.parse(info["_new_text"])
@@ -58,7 +60,9 @@ def test_no_dataloader_gives_reason(tmp_path):
 def test_apply_is_reversible(tmp_path):
     p = _write(tmp_path)
     original = p.read_text()
-    info = patcher.make_patch(["python", str(p)], ".", [{"kind": "dataloader_kwargs", "kwargs": {"num_workers": 5, "persistent_workers": True}}], tmp_path / "out")
+    info = patcher.make_patch(
+        ["python", str(p)], ".", [{"kind": "dataloader_kwargs", "kwargs": {"num_workers": 5, "persistent_workers": True}}], tmp_path / "out"
+    )
     applied = patcher.apply_patch(info)
     assert applied["applied"] is True
     assert "num_workers=5" in p.read_text()
@@ -69,5 +73,7 @@ def test_apply_is_reversible(tmp_path):
 
 
 def test_missing_script_reason(tmp_path):
-    info = patcher.make_patch(["python", "does_not_exist.py"], str(tmp_path), [{"kind": "dataloader_kwargs", "kwargs": {"num_workers": 4}}], tmp_path / "out")
+    info = patcher.make_patch(
+        ["python", "does_not_exist.py"], str(tmp_path), [{"kind": "dataloader_kwargs", "kwargs": {"num_workers": 4}}], tmp_path / "out"
+    )
     assert info["patch_path"] is None and "find" in info["reason"]

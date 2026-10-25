@@ -85,7 +85,9 @@ def test_fix_injects_dataloader_workers(tmp_path, script):
     from train_doctor.runner import RunConfig, run
 
     cmd = script("train.py", LOOP)
-    cfg = RunConfig(cmd=cmd, warmup_steps=1, steps=4, seconds=0.0, env={"TRAIN_DOCTOR_FIX_NUM_WORKERS": "2", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS": "1"})
+    cfg = RunConfig(
+        cmd=cmd, warmup_steps=1, steps=4, seconds=0.0, env={"TRAIN_DOCTOR_FIX_NUM_WORKERS": "2", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS": "1"}
+    )
     run(cfg, tmp_path / "r")
     ev = write_evidence(tmp_path / "r")
     assert ev["config"]["dataloader_fix"] == {"num_workers": 2, "persistent_workers": True}

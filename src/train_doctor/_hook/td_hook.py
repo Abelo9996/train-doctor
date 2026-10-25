@@ -66,9 +66,11 @@ def _fix_overrides() -> dict:
             over["prefetch_factor"] = max(1, int(pf))
         except ValueError:
             pass
-    for key, env in (("persistent_workers", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS"),
-                     ("pin_memory", "TRAIN_DOCTOR_FIX_PIN_MEMORY"),
-                     ("cudnn_benchmark", "TRAIN_DOCTOR_FIX_CUDNN_BENCHMARK")):
+    for key, env in (
+        ("persistent_workers", "TRAIN_DOCTOR_FIX_PERSISTENT_WORKERS"),
+        ("pin_memory", "TRAIN_DOCTOR_FIX_PIN_MEMORY"),
+        ("cudnn_benchmark", "TRAIN_DOCTOR_FIX_CUDNN_BENCHMARK"),
+    ):
         v = os.environ.get(env)
         if v not in (None, ""):
             over[key] = v == "1"

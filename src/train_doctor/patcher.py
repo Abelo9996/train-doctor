@@ -118,7 +118,9 @@ def diff_text(target: Path, original_text: str, new_text: str, out_dir: Path) ->
         return {"patch_path": None, "reason": "nothing to change", "target": str(target)}
     rel = target.name
     diff = "".join(
-        difflib.unified_diff(original_text.splitlines(keepends=True), new_text.splitlines(keepends=True), fromfile=f"a/{rel}", tofile=f"b/{rel}")
+        difflib.unified_diff(
+            original_text.splitlines(keepends=True), new_text.splitlines(keepends=True), fromfile=f"a/{rel}", tofile=f"b/{rel}"
+        )
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     patch_path = out_dir / f"{target.stem}.fix.patch"

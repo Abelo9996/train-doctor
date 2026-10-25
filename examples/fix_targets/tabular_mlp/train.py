@@ -67,7 +67,12 @@ def main():
     device = pick_device(args.device)
     x, y = make_data(args.rows)
     loader = DataLoader(
-        TensorDataset(x, y), batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True, generator=torch.Generator().manual_seed(0)
+        TensorDataset(x, y),
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True,
+        generator=torch.Generator().manual_seed(0),
     )
     model = MLP().to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3)

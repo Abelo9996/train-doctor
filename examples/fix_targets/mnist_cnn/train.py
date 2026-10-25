@@ -89,7 +89,12 @@ def main():
     device = pick_device(args.device)
     ds = SyntheticDigits(args.rows)
     loader = DataLoader(
-        ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True, generator=torch.Generator().manual_seed(0)
+        ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True,
+        generator=torch.Generator().manual_seed(0),
     )
     model = Net().to(device)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)

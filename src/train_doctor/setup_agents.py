@@ -124,7 +124,9 @@ def _skill_action(target: str, dest: Path, text: str) -> Action:
 AGENTS = ("claude", "codex", "cursor")
 
 
-def plan(home: Path | None = None, project: str | None = None, server: list[str] | None = None, agents: list[str] | None = None) -> list[Action]:
+def plan(
+    home: Path | None = None, project: str | None = None, server: list[str] | None = None, agents: list[str] | None = None
+) -> list[Action]:
     """Actions to register the server and skill, only for the agents explicitly asked for.
 
     ``setup`` never edits ~/.claude, ~/.codex or ~/.cursor unless that agent is named in

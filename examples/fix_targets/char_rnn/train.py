@@ -77,7 +77,12 @@ def main():
     device = torch.device(args.device)
     ds = CharWindows(make_corpus(), block=args.block, n=args.samples)
     loader = DataLoader(
-        ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True, generator=torch.Generator().manual_seed(0)
+        ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True,
+        generator=torch.Generator().manual_seed(0),
     )
     model = CharLSTM(ds.vocab).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=3e-3)
